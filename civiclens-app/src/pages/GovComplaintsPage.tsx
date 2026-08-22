@@ -576,12 +576,20 @@ export default function GovComplaintsPage() {
                               <span className="text-xs font-bold uppercase tracking-wider">{verification.riskLevel}</span>
                             </div>
 
-                            {/* Captured Image */}
-                            <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10">
-                              <div
-                                className="absolute inset-0 bg-cover bg-center bg-neutral-900"
-                                style={{ backgroundImage: `url('${verification.imageUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=400&q=80'}')` }}
-                              />
+                            {/* Captured Image - use actual complaint photoUrl */}
+                            <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10 bg-neutral-900 flex items-center justify-center">
+                              {selected.photoUrl ? (
+                                <img
+                                  src={selected.photoUrl}
+                                  alt="Evidence Photo"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center gap-1 text-on-surface-variant/40">
+                                  <span className="material-symbols-outlined text-[28px]">photo_camera</span>
+                                  <span className="text-[9px] uppercase tracking-widest">No photo</span>
+                                </div>
+                              )}
                             </div>
 
                             {/* Verification status breakdown */}
@@ -703,11 +711,19 @@ export default function GovComplaintsPage() {
                               </div>
                             )}
 
-                            <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10">
-                              <div
-                                className="absolute inset-0 bg-cover bg-center bg-neutral-900"
-                                style={{ backgroundImage: `url('${selected.photoUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=400&q=80'}')` }}
-                              />
+                            <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10 bg-neutral-900 flex items-center justify-center">
+                              {selected.photoUrl ? (
+                                <img
+                                  src={selected.photoUrl}
+                                  alt="Complaint Evidence"
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="flex flex-col items-center gap-1 text-on-surface-variant/40">
+                                  <span className="material-symbols-outlined text-[28px]">photo_camera</span>
+                                  <span className="text-[9px] uppercase tracking-widest">No photo</span>
+                                </div>
+                              )}
                               <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
                               <div className="absolute bottom-2.5 left-2.5 right-2.5">
                                 <span className="text-[9px] text-on-surface bg-surface-container/80 backdrop-blur px-1.5 py-0.5 rounded uppercase mb-1 block w-max">Category: {selected.category}</span>

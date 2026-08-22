@@ -306,11 +306,22 @@ export default function CitizenDashboardPage() {
               </div>
 
               {/* Photo Evidence */}
-              <div className="relative w-full h-44 rounded-xl overflow-hidden border border-white/10 bg-neutral-900">
-                <div
-                  className="absolute inset-0 bg-cover bg-center"
-                  style={{ backgroundImage: `url('${c.photoUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=600&q=80'}')` }}
-                />
+              <div className="relative w-full h-44 rounded-xl overflow-hidden border border-white/10 bg-neutral-900 flex items-center justify-center">
+                {c.photoUrl ? (
+                  <img
+                    src={c.photoUrl}
+                    alt="Complaint Evidence"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLImageElement).style.display = 'none'
+                    }}
+                  />
+                ) : (
+                  <div className="flex flex-col items-center gap-2 text-on-surface-variant/40">
+                    <span className="material-symbols-outlined text-[36px]">photo_camera</span>
+                    <span className="text-[10px] uppercase tracking-widest">No photo attached</span>
+                  </div>
+                )}
               </div>
 
               {/* Basic description */}

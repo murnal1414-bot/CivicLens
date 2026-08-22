@@ -455,7 +455,7 @@ export default function CitizenPage() {
 
     setTimeout(() => {
       setAnalysisStatus(prev => ({ ...prev, locationVerified: true }))
-    }, 1200)
+    }, 400)
 
     try {
       const categoryMapping: Record<string, string> = {

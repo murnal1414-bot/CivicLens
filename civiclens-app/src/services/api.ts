@@ -612,12 +612,19 @@ export const civiclensApi = {
       const { data, error } = await supabase
         .from('complaint_verifications')
         .select('*');
-      if (error) {
-        console.error('Error fetching verifications:', error.message);
-        const local = localStorage.getItem('civiclens_verifications');
-        return local ? JSON.parse(local) : [];
+      
+      const local = localStorage.getItem('civiclens_verifications');
+      const localList: ComplaintVerification[] = local ? JSON.parse(local) : [];
+      
+      if (error || !data || data.length === 0) {
+        console.warn('Supabase verifications unavailable, using localStorage:', error?.message);
+        return localList;
       }
-      return data || [];
+      
+      // Merge: Supabase is authoritative, but fill in any local-only entries
+      const supabaseIds = new Set(data.map((v: any) => v.complaintId));
+      const localOnly = localList.filter(v => !supabaseIds.has(v.complaintId));
+      return [...data, ...localOnly];
     } catch (e) {
       const local = localStorage.getItem('civiclens_verifications');
       return local ? JSON.parse(local) : [];
@@ -784,7 +791,8 @@ export const civiclensApi = {
     const verification: ComplaintVerification = {
       id: `VR-${Math.floor(1000 + Math.random() * 9000)}`,
       complaintId,
-      imageUrl: photoUrl,
+      // Don't store full base64 in DB - too large; store only photoUrl reference
+      imageUrl: photoUrl.startsWith('data:') ? '[base64-captured]' : photoUrl,
       detectedCategory: aiRes.detectedIssue,
       selectedCategory: category,
       imageConfidence: aiRes.matchPercentage / 100,
