@@ -261,6 +261,20 @@
   text-align: center !important;
 }
 
+/* Fix dropdown options list to ensure text is highly visible on both light/dark backgrounds */
+.goog-te-gadget .goog-te-combo option {
+  background-color: #0f172a !important; /* slate-900 background */
+  color: #f8fafc !important; /* white/light-gray text */
+  font-size: 11px !important;
+  font-family: 'Inter', sans-serif !important;
+  padding: 8px !important;
+}
+
+.light .goog-te-gadget .goog-te-combo option {
+  background-color: #ffffff !important;
+  color: #1f2937 !important; /* dark-gray text for light mode */
+}
+
 .dark .goog-te-gadget .goog-te-combo {
   background: rgba(255, 255, 255, 0.05) !important;
   border: 1px solid rgba(255, 255, 255, 0.1) !important;
@@ -283,26 +297,39 @@
   border-color: rgba(0, 0, 0, 0.15) !important;
 }
 
-.goog-te-banner-frame.skiptranslate,
-.goog-te-banner-frame,
-.goog-te-banner {
-  display: none !important;
-}
-
+/* Force body styling to override Google's top: 40px push */
 body {
   top: 0px !important;
+  position: static !important;
+}
+
+/* Completely eradicate Google's translation banner from rendering or pushing content */
+.goog-te-banner-frame.skiptranslate,
+.goog-te-banner-frame,
+.goog-te-banner,
+iframe.goog-te-banner-frame,
+iframe[class*="goog-te-banner-frame"] {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  margin-top: -100px !important;
 }
 
 #goog-gt-tt {
   display: none !important;
+  visibility: hidden !important;
 }
 
 .goog-tooltip {
   display: none !important;
+  visibility: hidden !important;
 }
 
 .goog-tooltip:hover {
   display: none !important;
+  visibility: hidden !important;
 }
 
 .goog-text-highlight {
