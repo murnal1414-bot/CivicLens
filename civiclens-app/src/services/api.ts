@@ -376,12 +376,31 @@ export const civiclensApi = {
         // (which may not yet be in Supabase due to base64 size limits)
         const supabaseList = data || [];
         const local = localStorage.getItem('civiclens_complaints');
-        const localList: Complaint[] = local ? JSON.parse(local) : [];
+        const localList: (Complaint & { synced?: boolean })[] = local ? JSON.parse(local) : [];
         
         // For complaints in Supabase, prefer Supabase data (more authoritative)
         const supabaseIds = new Set(supabaseList.map((c: any) => c.id));
-        // Include local complaints not yet in Supabase, with full photoUrl
-        const localOnly = localList.filter((c: Complaint) => !supabaseIds.has(c.id));
+        
+        // Filter out locally stored complaints that were already synced but are no longer in Supabase (deleted by officer)
+        const deletedIds = new Set<string>();
+        const localOnly: Complaint[] = [];
+        
+        for (const c of localList) {
+          if (!supabaseIds.has(c.id)) {
+            if (c.synced) {
+              deletedIds.add(c.id);
+            } else {
+              localOnly.push(c);
+            }
+          }
+        }
+        
+        // If complaints were deleted by officer, remove them from citizen's local storage permanently
+        if (deletedIds.size > 0) {
+          const cleanedLocal = localList.filter(c => !deletedIds.has(c.id));
+          localStorage.setItem('civiclens_complaints', JSON.stringify(cleanedLocal));
+        }
+
         list = [...supabaseList, ...localOnly];
       }
     } catch (e) {
@@ -480,11 +499,11 @@ export const civiclensApi = {
       initials: complaint.assignee ? complaint.assignee.split(' ').map(n => n[0]).join('').toUpperCase() : ''
     }
 
-    // Always save to localStorage FIRST so it appears immediately even if Supabase fails
+    // Always save to localStorage FIRST so it appears immediately even if Supabase fails (unsynced draft)
     const localList = localStorage.getItem('civiclens_complaints')
       ? JSON.parse(localStorage.getItem('civiclens_complaints')!)
       : [...DEFAULT_COMPLAINTS];
-    localList.unshift(newComplaint);
+    localList.unshift({ ...newComplaint, synced: false });
     localStorage.setItem('civiclens_complaints', JSON.stringify(localList));
 
     // Then save to Supabase (strip base64 photoUrl — too large for DB row)
@@ -501,6 +520,14 @@ export const civiclensApi = {
 
       if (error) {
         console.error('Error saving complaint in Supabase:', error.message);
+      } else {
+        // Successfully synced to Supabase! Mark as synced: true in localStorage
+        const listNow = localStorage.getItem('civiclens_complaints');
+        if (listNow) {
+          const parsed = JSON.parse(listNow);
+          const updated = parsed.map((c: any) => c.id === id ? { ...c, synced: true } : c);
+          localStorage.setItem('civiclens_complaints', JSON.stringify(updated));
+        }
       }
     } catch (e) {
       console.error('Failed to insert into Supabase:', e);
