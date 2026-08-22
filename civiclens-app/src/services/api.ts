@@ -379,7 +379,16 @@ export const civiclensApi = {
       const local = localStorage.getItem('civiclens_complaints');
       list = local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
     }
-    return clusterComplaints(list)
+
+    // Merge with extended local storage metadata to show date/time overrides
+    const extended = localStorage.getItem('civiclens_complaints_extended');
+    const extendedMap = extended ? JSON.parse(extended) : {};
+    const mergedList = list.map(c => ({
+      ...c,
+      ...(extendedMap[c.id] || {})
+    }));
+
+    return clusterComplaints(mergedList)
   },
 
   async addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'> & { deviceLatitude?: number; deviceLongitude?: number; capturedAt?: string }): Promise<Complaint> {
@@ -450,10 +459,14 @@ export const civiclensApi = {
   },
 
   async updateComplaint(id: string, updates: Partial<Complaint>): Promise<Complaint[]> {
+    const dbUpdates = { ...updates };
+    delete dbUpdates.dispatchTime;
+    delete dbUpdates.estimatedSolutionDate;
+
     try {
       const { error } = await supabase
         .from('complaints')
-        .update(updates)
+        .update(dbUpdates)
         .eq('id', id);
 
       if (error) {
@@ -461,6 +474,18 @@ export const civiclensApi = {
       }
     } catch (e) {
       console.error('Failed to update Supabase complaint:', e);
+    }
+
+    // Save extended metadata locally
+    if (updates.dispatchTime || updates.estimatedSolutionDate) {
+      const extended = localStorage.getItem('civiclens_complaints_extended');
+      const extendedMap = extended ? JSON.parse(extended) : {};
+      extendedMap[id] = {
+        ...(extendedMap[id] || {}),
+        ...(updates.dispatchTime ? { dispatchTime: updates.dispatchTime } : {}),
+        ...(updates.estimatedSolutionDate ? { estimatedSolutionDate: updates.estimatedSolutionDate } : {})
+      };
+      localStorage.setItem('civiclens_complaints_extended', JSON.stringify(extendedMap));
     }
 
     const localList = localStorage.getItem('civiclens_complaints') ? JSON.parse(localStorage.getItem('civiclens_complaints')!) : [...DEFAULT_COMPLAINTS];
