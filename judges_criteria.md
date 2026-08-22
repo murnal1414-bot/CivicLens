@@ -12,7 +12,7 @@ This document outlines how **CivicLens** satisfies the hackathon evaluation crit
 | **Technical Implementation** | **25%** | React & TS Frontend, Supabase Real-time DB, Dual fallback local storage architecture. |
 | **Problem Relevance** | **20%** | Grievance resolution for Indore Municipal Corp (IMC), spam reduction, division of labor. |
 | **User Experience & Design** | **10%** | Fluid glassmorphism UI, theme toggling, simplified mobile reporting wizard. |
-| **Scalability & Impact** | **15%** | Serverless backend, geographical hotspot clustering, automated dispatch guidelines. |
+| **Scalability & Impact** | **15%** | Multi-city scalability, geographical hotspot clustering, automated dispatch guidelines. |
 
 ---
 
@@ -54,7 +54,9 @@ Designed for high user retention and simplicity:
 ---
 
 ## 📈 5. Scalability & Impact (15%)
-Built to scale to millions of complaints across Indore:
+Built to scale dynamically across multiple municipalities:
+* **Multi-City Tenant Readiness:** Engineered using location-agnostic geocoding (Nominatim OpenStreetMap) and dynamic database routing. The system can scale instantly to any other Indian city (e.g. Bhopal, Mumbai, Delhi) simply by pointing the instance to the city's respective coordinate boundaries.
 * **Zero-Cold Start Infrastructure:** Utilizing Postgres database with optimized triggers.
 * **Hotspot Clustering:** Spatial clustering algorithm automatically bundles nearby complaints into a "Major Cluster" when density increases, allowing teams to treat multiple individual reports as a single coordinated dispatch.
 * **Crew Dispatch Automation:** Suggests step-by-step guidelines for ground crews directly in the officer panel to minimize field coordination time.
+
