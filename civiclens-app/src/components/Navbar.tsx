@@ -19,6 +19,25 @@ export default function Navbar() {
   const { pathname } = useLocation()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [sessionEmail, setSessionEmail] = useState('')
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null)
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
+  }, [])
+
+  const handleInstallClick = async () => {
+    if (!deferredPrompt) return
+    deferredPrompt.prompt()
+    const { outcome } = await deferredPrompt.userChoice
+    if (outcome === 'accepted') {
+      setDeferredPrompt(null)
+    }
+  }
 
   const lastPathname = useRef(pathname)
   useEffect(() => {
@@ -225,6 +244,12 @@ export default function Navbar() {
           <div id="google_translate_element" className="flex items-center" />
           <ThemeToggle />
           
+          {deferredPrompt && (
+            <Button onClick={handleInstallClick} size="sm" className="hidden sm:inline-flex text-[11px] font-semibold bg-green-600 text-white hover:bg-green-700 rounded-full shadow-md">
+              Install App
+            </Button>
+          )}
+
           {isLoggedIn ? (
             <Button onClick={handleSignOut} size="sm" className="text-[11px] font-semibold bg-gray-900 text-white hover:opacity-90 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-full shadow-md">
               Sign Out
