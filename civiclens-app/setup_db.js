@@ -36,7 +36,9 @@ async function run() {
         "voiceUrl" TEXT,
         "photoUrl" TEXT,
         "citizenEmail" TEXT,
-        "citizenPhone" TEXT
+        "citizenPhone" TEXT,
+        "latitude" DOUBLE PRECISION,
+        "longitude" DOUBLE PRECISION
       );
     `);
     console.log('Table "complaints" recreated successfully with exact-casing column names.');

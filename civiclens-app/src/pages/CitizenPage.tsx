@@ -1,9 +1,11 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { civiclensApi } from '../services/api'
 import { supabase } from '../services/supabase'
 import { runRouterAgent } from '../services/ai'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 const SUBCATS: Record<string, string[]> = {
   water:      ['Water leaking from pipe', 'No water supply', 'Low water pressure', 'Dirty water'],
@@ -49,6 +51,12 @@ export default function CitizenPage() {
   const [citizenPhone, setCitizenPhone] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstance = useRef<L.Map | null>(null)
+  const markerRef = useRef<L.Marker | null>(null)
+  const [lat, setLat] = useState(22.7196) // Indore lat
+  const [lng, setLng] = useState(75.8577) // Indore lng
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -72,6 +80,103 @@ export default function CitizenPage() {
     }
     checkAuth()
   }, [navigate])
+
+  // Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapRef.current) return
+
+    // If map isn't initialized yet, initialize it
+    if (!mapInstance.current) {
+      const map = L.map(mapRef.current, { zoomControl: false }).setView([lat, lng], 13)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+      }).addTo(map)
+
+      // Custom marker icon
+      const markerIcon = L.icon({
+        iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+        shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+        iconSize: [25, 41],
+        iconAnchor: [12, 41]
+      })
+
+      const marker = L.marker([lat, lng], { icon: markerIcon, draggable: true }).addTo(map)
+      markerRef.current = marker
+      mapInstance.current = map
+
+      // On dragend, reverse geocode to update address
+      marker.on('dragend', async () => {
+        const position = marker.getLatLng()
+        setLat(position.lat)
+        setLng(position.lng)
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`)
+          const data = await res.json()
+          if (data?.display_name) {
+            setAddress(data.display_name)
+          }
+        } catch (err) {
+          console.error('Reverse geocode failed:', err)
+        }
+      })
+
+      // On map click, move marker and reverse geocode
+      map.on('click', async (e: any) => {
+        const { lat: clickLat, lng: clickLng } = e.latlng
+        setLat(clickLat)
+        setLng(clickLng)
+        marker.setLatLng([clickLat, clickLng])
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clickLat}&lon=${clickLng}`)
+          const data = await res.json()
+          if (data?.display_name) {
+            setAddress(data.display_name)
+          }
+        } catch (err) {
+          console.error('Reverse geocode failed:', err)
+        }
+      })
+    }
+
+    return () => {
+      // Clean up map when component unmounts
+      if (mapInstance.current) {
+        mapInstance.current.remove()
+        mapInstance.current = null
+      }
+    }
+  }, [])
+
+  // Sync address search field inputs to map coordinates (debounced 1.2s)
+  useEffect(() => {
+    if (!address.trim() || !mapInstance.current || !markerRef.current) return
+
+    const delayDebounce = setTimeout(async () => {
+      // Don't search if address is just coordinates
+      if (/^-?\d+(\.\d+)?, \s*-?\d+(\.\d+)?$/.test(address.trim())) return
+
+      try {
+        const query = encodeURIComponent(`Indore, ${address}`)
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`)
+        const data = await res.json()
+        if (data && data.length > 0) {
+          const first = data[0]
+          const newLat = parseFloat(first.lat)
+          const newLng = parseFloat(first.lon)
+          
+          setLat(newLat)
+          setLng(newLng)
+          
+          markerRef.current?.setLatLng([newLat, newLng])
+          mapInstance.current?.setView([newLat, newLng], 15)
+        }
+      } catch (err) {
+        console.error('Geocode search failed:', err)
+      }
+    }, 1200)
+
+    return () => clearTimeout(delayDebounce)
+  }, [address])
 
   const [aiRunning, setAiRunning] = useState(false)
   const [aiExplanation, setAiExplanation] = useState('')
@@ -126,10 +231,32 @@ export default function CitizenPage() {
   const getLocation = () => {
     setGpsLoad(true)
     navigator.geolocation.getCurrentPosition(
-      pos => {
-        setAddress(`${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`)
+      async pos => {
+        const { latitude: gpsLat, longitude: gpsLng } = pos.coords
+        setLat(gpsLat)
+        setLng(gpsLng)
+        
+        if (markerRef.current) {
+          markerRef.current.setLatLng([gpsLat, gpsLng])
+        }
+        if (mapInstance.current) {
+          mapInstance.current.setView([gpsLat, gpsLng], 15)
+        }
+        
         setGpsOk(true)
         setGpsLoad(false)
+
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${gpsLat}&lon=${gpsLng}`)
+          const data = await res.json()
+          if (data?.display_name) {
+            setAddress(data.display_name)
+          } else {
+            setAddress(`${gpsLat.toFixed(4)}, ${gpsLng.toFixed(4)}`)
+          }
+        } catch (err) {
+          setAddress(`${gpsLat.toFixed(4)}, ${gpsLng.toFixed(4)}`)
+        }
       },
       () => setGpsLoad(false)
     )
@@ -178,7 +305,9 @@ export default function CitizenPage() {
         photoUrl: previews[0] || '',
         assignee: '',
         citizenEmail,
-        citizenPhone
+        citizenPhone,
+        latitude: lat,
+        longitude: lng
       })
 
       setTracking(newTicket.id)
@@ -431,19 +560,13 @@ export default function CitizenPage() {
                   <span className="text-[10px] text-on-surface-variant/40 uppercase tracking-widest">3 of 3</span>
                 </div>
 
-                {/* Map thumbnail */}
-                <div className="relative w-full h-52 rounded-xl overflow-hidden border border-white/10 bg-surface-container grayscale hover:grayscale-0 transition-all duration-500 cursor-crosshair">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuAtBoZExASt7kFi7OV92ddP4mS6MKgGbo8GFgpYwa-sP-7ex6ccYJNyc7fpV3gqmViBuNlRcIfjveOl8NVhdWo26IxgearDkF-B-yJ-H4M_BF_eMEpds8qVS2m_0FrkITLkS-YF2dnPYo3k0BbwYjE4BnXVL6c0cozwRxmkaDv7Bua1mNScFOOG2rGiDuTEs1gzxF2eB7WY5_CdBROSexYoXgRA2WHVF0L2mhGVglOK1E-aaXokEXFr')` }}
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <span className="material-symbols-outlined text-primary text-[36px] drop-shadow-lg" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
-                  </div>
+                {/* Map container */}
+                <div className="relative w-full h-52 rounded-xl overflow-hidden border border-white/10 bg-surface-container hover:border-primary/30 transition-all duration-300 z-10">
+                  <div ref={mapRef} className="w-full h-full text-black" style={{ minHeight: '200px' }} />
                   <button
                     onClick={getLocation}
                     title="Use my current location"
-                    className="absolute top-3 right-3 w-9 h-9 bg-surface-container/80 backdrop-blur rounded-full border border-white/10 flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors text-on-surface shadow"
+                    className="absolute top-3 right-3 w-9 h-9 bg-surface-container/90 backdrop-blur rounded-full border border-white/10 flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors text-on-surface shadow z-[1000]"
                   >
                     <span className={`material-symbols-outlined text-[16px] ${gpsLoading ? 'animate-spin' : ''}`}>
                       {gpsLoading ? 'refresh' : 'my_location'}

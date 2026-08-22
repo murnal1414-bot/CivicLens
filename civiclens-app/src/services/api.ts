@@ -21,6 +21,8 @@ export type Complaint = {
   photoUrl?: string
   citizenEmail?: string
   citizenPhone?: string
+  latitude?: number
+  longitude?: number
 }
 
 export type Department = {

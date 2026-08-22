@@ -1,8 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link } from 'react-router-dom'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import { supabase } from '../services/supabase'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 
 export default function GovOverviewPage() {
   const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '100%' })
@@ -19,6 +21,10 @@ export default function GovOverviewPage() {
   const [officerName, setOfficerName] = useState('Municipal Officer')
   const [officerEmail, setOfficerEmail] = useState('')
   const [officerAvatar, setOfficerAvatar] = useState('')
+
+  const mapRef = useRef<HTMLDivElement>(null)
+  const mapInstance = useRef<L.Map | null>(null)
+  const [complaintsList, setComplaintsList] = useState<any[]>([])
 
   useEffect(() => {
     const load = async () => {
@@ -42,6 +48,7 @@ export default function GovOverviewPage() {
 
       // Single query fetch for speed & consistency
       const complaints = await civiclensApi.getComplaints()
+      setComplaintsList(complaints)
       const total = complaints.length
       const open = complaints.filter(c => c.status !== 'RESOLVED').length
       const resolved = complaints.filter(c => c.status === 'RESOLVED').length
@@ -137,6 +144,62 @@ export default function GovOverviewPage() {
     }
     load()
   }, [])
+
+  // Initialize and populate Leaflet Map on complaintsList update
+  useEffect(() => {
+    if (!mapRef.current || complaintsList.length === 0) return
+
+    if (!mapInstance.current) {
+      const map = L.map(mapRef.current, { zoomControl: false }).setView([22.7196, 75.8577], 12)
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap'
+      }).addTo(map)
+      mapInstance.current = map
+    }
+
+    // Clear existing markers/circles before drawing updated list
+    mapInstance.current.eachLayer((layer: any) => {
+      if (layer instanceof L.Circle || layer instanceof L.Marker) {
+        mapInstance.current?.removeLayer(layer)
+      }
+    })
+
+    complaintsList.forEach(c => {
+      // Color markers based on priority: Critical = Red, High = Orange, Medium = Blue
+      let color = '#3b82f6' // Blue
+      if (c.priority === 'CRITICAL') {
+        color = '#ef4444' // Red
+      } else if (c.priority === 'HIGH') {
+        color = '#facc15' // Orange/Yellow
+      }
+
+      // Generate spread coordinates around Indore center if coordinates are missing in DB
+      const latVal = c.latitude || (22.7196 + (parseFloat(c.id.replace(/\D/g, '')) % 100) * 0.0003 - 0.015)
+      const lngVal = c.longitude || (75.8577 + (parseFloat(c.id.replace(/\D/g, '')) % 70) * 0.0003 - 0.01)
+
+      const circle = L.circle([latVal, lngVal], {
+        color: color,
+        fillColor: color,
+        fillOpacity: 0.8,
+        radius: 120
+      }).addTo(mapInstance.current!)
+
+      circle.bindPopup(`
+        <div style="font-family: sans-serif; font-size: 11px; padding: 2px; color: #111;">
+          <strong style="color: ${color}; font-size: 12px;">${c.priority} Priority</strong><br/>
+          <strong>ID:</strong> ${c.id}<br/>
+          <strong>Category:</strong> ${c.category}<br/>
+          <strong>Location:</strong> ${c.location}<br/>
+          <strong>Status:</strong> ${c.status}<br/>
+          <p style="margin: 4px 0 0 0; color: #555;">${c.description}</p>
+        </div>
+      `)
+    })
+
+    return () => {
+      // clean up handled automatically or on destroy
+    }
+  }, [complaintsList])
 
   const kpis = [
     { icon: 'forum',           label: 'Total Complaints',   value: stats.total.toString(), trend: '+12%', trendUp: true,  accent: 'primary',   bar: 70 },
@@ -266,32 +329,28 @@ export default function GovOverviewPage() {
             </div>
 
             {/* Live map card */}
-            <div className="lg:col-span-4 bg-surface-container-low/40 border border-white/5 rounded-2xl p-4 flex flex-col justify-between min-h-[220px] relative overflow-hidden group">
-              <div className="absolute inset-0 bg-cover bg-center opacity-40 grayscale group-hover:grayscale-0 transition-all duration-500"
-                style={{ backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuDQ4wiH1bQhCBa1LKNInZd9FPoEiqWNBz840I5RaGsPNA3pdQE34tm7NVgSbCeNWAK0BcNvig25zIpny5KBqSIgtzVyCeT9ekDSsp1rP1szfafH5xL00xm-DCkKwsxMaWIt2XwrCf8oi4omAXbgabEavNH8kK8dgyZujwQrbyB2aow9XSdaz2buNOKy82xOxn0LXV9lQPlQEElmBEfn9MAuZ5gnAPB3WDyyLcHu8gXz_6zsqGKbiCxe')` }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent z-[1]" />
-              
-              <div className="relative z-10 flex justify-between items-start">
-                <span className="px-2.5 py-1 bg-background/85 border border-white/10 rounded-full text-[9px] text-on-surface uppercase tracking-widest font-semibold flex items-center gap-1.5">
+            <div className="lg:col-span-4 bg-surface-container-low/40 border border-white/5 rounded-2xl p-4 flex flex-col min-h-[300px] relative overflow-hidden group z-10">
+              <div className="absolute inset-0 z-0">
+                <div ref={mapRef} className="w-full h-full text-black" style={{ minHeight: '300px' }} />
+              </div>
+              <div className="relative z-10 flex justify-between items-start pointer-events-none">
+                <span className="px-2.5 py-1 bg-background/90 border border-white/10 rounded-full text-[9px] text-on-surface uppercase tracking-widest font-semibold flex items-center gap-1.5 shadow-lg">
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                   Live Map
                 </span>
               </div>
 
-              <div className="relative z-10 mt-auto bg-surface-container-lowest/90 backdrop-blur border border-white/5 p-3 rounded-xl">
-                <h4 className="text-xs font-semibold text-on-surface mb-2">Active Areas</h4>
+              <div className="relative z-10 mt-auto bg-surface-container-lowest/95 backdrop-blur border border-white/10 p-3 rounded-xl shadow-lg pointer-events-none">
+                <h4 className="text-xs font-semibold text-on-surface mb-2">Priority Legend</h4>
                 <div className="space-y-1.5">
                   {[
-                    { color: 'bg-error', name: 'Zone 4 (Sanitation)', count: '42 issues' },
-                    { color: 'bg-secondary', name: 'Zone 1 (Water)', count: '18 issues' },
+                    { color: 'bg-error', name: 'Critical Issues' },
+                    { color: 'bg-secondary', name: 'High Issues' },
+                    { color: 'bg-primary', name: 'Medium Issues' },
                   ].map(a => (
-                    <div key={a.name} className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-1.5 h-1.5 rounded-full ${a.color}`} />
-                        <span className="text-on-surface-variant text-[11px]">{a.name}</span>
-                      </div>
-                      <span className="text-on-surface font-medium text-[11px]">{a.count}</span>
+                    <div key={a.name} className="flex items-center gap-2 text-xs">
+                      <div className={`w-1.5 h-1.5 rounded-full ${a.color}`} />
+                      <span className="text-on-surface-variant text-[10px] uppercase font-bold tracking-wider">{a.name}</span>
                     </div>
                   ))}
                 </div>
