@@ -290,6 +290,20 @@ export default function GovComplaintsPage() {
     setVerifications(vers)
   }
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [targetDeleteId, setTargetDeleteId] = useState('')
+
+  const handleDeleteConfirm = async () => {
+    if (!targetDeleteId) return
+    const updated = await civiclensApi.deleteComplaint(targetDeleteId)
+    setComplaints(updated)
+    const vers = await civiclensApi.getVerifications()
+    setVerifications(vers)
+    setShowDeleteModal(false)
+    setTargetDeleteId('')
+    setSelected(null)
+  }
+
   // Filter complaints list
   let filtered = complaints.filter(c => {
     const matchesSearch = c.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -550,9 +564,18 @@ export default function GovComplaintsPage() {
                       <span className="material-symbols-outlined text-primary text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                       <h3 className="font-semibold text-primary">AI Analysis</h3>
                     </div>
-                    <button onClick={() => setSelected(null)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
-                      <span className="material-symbols-outlined text-[16px]">close</span>
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => { setTargetDeleteId(selected.id); setShowDeleteModal(true) }}
+                        className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-red-500/20 text-error/60 hover:text-error transition-colors"
+                        title="Remove complaint"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete</span>
+                      </button>
+                      <button onClick={() => setSelected(null)} className="w-6 h-6 flex items-center justify-center rounded-full hover:bg-surface-container text-on-surface-variant transition-colors">
+                        <span className="material-symbols-outlined text-[16px]">close</span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Sidebar Body */}
@@ -982,6 +1005,35 @@ export default function GovComplaintsPage() {
                 className="px-4 py-2 bg-error text-white rounded-lg hover:opacity-90 disabled:opacity-50 transition-opacity"
               >
                 Confirm Rejection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Complaint Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-sm">
+          <div className="bg-surface-container border border-white/10 rounded-xl p-5 max-w-xs w-full shadow-2xl animate-scale-up text-left">
+            <div className="w-12 h-12 rounded-full bg-error/10 border border-error/20 flex items-center justify-center mx-auto mb-4">
+              <span className="material-symbols-outlined text-error text-[24px]">delete_forever</span>
+            </div>
+            <h3 className="text-sm font-semibold text-on-surface mb-1 text-center">Remove Complaint?</h3>
+            <p className="text-xs text-on-surface-variant mb-5 text-center">
+              This will permanently remove complaint <code className="text-error font-bold bg-error/10 px-1 rounded">{targetDeleteId}</code> from the system. This action cannot be undone.
+            </p>
+            <div className="flex gap-2 text-xs font-semibold">
+              <button 
+                onClick={() => { setShowDeleteModal(false); setTargetDeleteId('') }}
+                className="flex-1 py-2 bg-surface-container-high border border-white/10 text-on-surface rounded-lg hover:bg-surface-container-highest transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="flex-1 py-2 bg-error text-white rounded-lg hover:opacity-90 transition-opacity"
+              >
+                Remove
               </button>
             </div>
           </div>

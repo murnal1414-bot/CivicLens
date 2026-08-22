@@ -595,6 +595,11 @@ export default function CitizenPage() {
     }
     const categoryIcon = categoryIconMapping[dept] || 'balance'
 
+    // Determine the status from AI result already shown in UI
+    const determinedStatus: import('../services/api').ComplaintStatus = 
+      verificationResult?.riskLevel === 'HIGH' ? 'REJECTED' :
+      verificationResult?.riskLevel === 'MEDIUM' ? 'PENDING_VERIFICATION' : 'OPEN'
+
     try {
       const newTicket = await civiclensApi.addComplaint({
         category: categoryName,
@@ -611,8 +616,34 @@ export default function CitizenPage() {
         longitude: lng,
         deviceLatitude: deviceLat || undefined,
         deviceLongitude: deviceLng || undefined,
-        capturedAt: capturedAt || undefined
+        capturedAt: capturedAt || undefined,
+        initialStatus: determinedStatus
       })
+
+      // Save the verification result to localStorage immediately so it shows in queue
+      if (verificationResult) {
+        const verRecord: import('../services/api').ComplaintVerification = {
+          id: `VR-${Math.floor(1000 + Math.random() * 9000)}`,
+          complaintId: newTicket.id,
+          imageUrl: '[base64-captured]',
+          detectedCategory: verificationResult.detectedCategory,
+          selectedCategory: categoryName,
+          imageConfidence: verificationResult.imageConfidence / 100,
+          imageMatch: verificationResult.imageMatch,
+          gpsVerified: verificationResult.gpsVerified,
+          gpsDistance: verificationResult.gpsDistance,
+          riskLevel: verificationResult.riskLevel as 'LOW' | 'MEDIUM' | 'HIGH',
+          verificationStatus: 'PENDING' as const,
+          verificationReason: verificationResult.reason,
+          createdAt: new Date().toISOString()
+        }
+        const existingVers = localStorage.getItem('civiclens_verifications')
+        const versList = existingVers ? JSON.parse(existingVers) : []
+        versList.unshift(verRecord)
+        localStorage.setItem('civiclens_verifications', JSON.stringify(versList))
+        // Also save to Supabase async (don't block)
+        civiclensApi.saveVerification(verRecord).catch(e => console.warn('Verification save failed:', e))
+      }
 
       setTracking(newTicket.id)
       setModal(true)

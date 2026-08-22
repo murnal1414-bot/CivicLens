@@ -410,55 +410,41 @@ export const civiclensApi = {
     return clusterComplaints(mergedList)
   },
 
-  async addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'> & { deviceLatitude?: number; deviceLongitude?: number; capturedAt?: string }): Promise<Complaint> {
+  async addComplaint(
+    complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'> &
+    { deviceLatitude?: number; deviceLongitude?: number; capturedAt?: string; initialStatus?: ComplaintStatus }
+  ): Promise<Complaint> {
     const id = `#G-${Math.floor(1000 + Math.random() * 9000)}-${complaint.category.charAt(0).toUpperCase()}`
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
     const dateStr = new Date().toLocaleDateString('en-US', options)
 
-    // 1. Synchronously execute AI verification to determine initial risk & status
-    let initialStatus: ComplaintStatus = 'OPEN'
-    let verification: ComplaintVerification | null = null
-
-    if (complaint.photoUrl) {
-      try {
-        verification = await this.verifyComplaintEvidence(
-          id,
-          complaint.category,
-          complaint.description,
-          complaint.photoUrl,
-          complaint.latitude,
-          complaint.longitude,
-          complaint.deviceLatitude,
-          complaint.deviceLongitude,
-          complaint.capturedAt
-        )
-        if (verification.riskLevel === 'HIGH') {
-          initialStatus = 'REJECTED'
-        } else if (verification.riskLevel === 'MEDIUM') {
-          initialStatus = 'PENDING_VERIFICATION'
-        }
-      } catch (e) {
-        console.error("AI Evidence Verification failed, placing in review queue:", e)
-        initialStatus = 'REJECTED'
-      }
-    }
+    // Use the pre-determined status from the frontend (AI was already run in the UI)
+    // This avoids a second slow AI API call that blocks submission
+    const initialStatus: ComplaintStatus = complaint.initialStatus || 'OPEN'
 
     const newComplaint: Complaint = {
       ...complaint,
       id,
       date: dateStr,
       status: initialStatus,
-      slaRemaining: initialStatus === 'REJECTED' 
-        ? 'Rejected by AI' 
-        : initialStatus === 'PENDING_VERIFICATION' 
-          ? 'Awaiting Verification' 
+      slaRemaining: initialStatus === 'REJECTED'
+        ? 'Rejected by AI'
+        : initialStatus === 'PENDING_VERIFICATION'
+          ? 'Awaiting Verification'
           : '23h 59m left',
       slaTotal: 'Limit: 24 hours',
       initials: complaint.assignee ? complaint.assignee.split(' ').map(n => n[0]).join('').toUpperCase() : ''
     }
 
+    // Always save to localStorage FIRST so it appears immediately even if Supabase fails
+    const localList = localStorage.getItem('civiclens_complaints')
+      ? JSON.parse(localStorage.getItem('civiclens_complaints')!)
+      : [...DEFAULT_COMPLAINTS];
+    localList.unshift(newComplaint);
+    localStorage.setItem('civiclens_complaints', JSON.stringify(localList));
+
+    // Then save to Supabase (strip base64 photoUrl — too large for DB row)
     try {
-      // Strip base64 photoUrl before Supabase insert (too large for DB row)
       const supabasePayload = {
         ...newComplaint,
         photoUrl: newComplaint.photoUrl?.startsWith('data:')
@@ -475,10 +461,6 @@ export const civiclensApi = {
     } catch (e) {
       console.error('Failed to insert into Supabase:', e);
     }
-
-    const localList = localStorage.getItem('civiclens_complaints') ? JSON.parse(localStorage.getItem('civiclens_complaints')!) : [...DEFAULT_COMPLAINTS];
-    localList.unshift(newComplaint);
-    localStorage.setItem('civiclens_complaints', JSON.stringify(localList));
 
     const depts = this.getDepartments();
     const targetDept = depts.find(d => d.name.toLowerCase().includes(complaint.category.toLowerCase()) || complaint.category.toLowerCase().includes(d.name.toLowerCase()));
@@ -892,6 +874,42 @@ export const civiclensApi = {
         verifiedAt: new Date().toISOString()
       });
     }
+    return this.getComplaints();
+  },
+
+  async deleteComplaint(id: string): Promise<Complaint[]> {
+    // Remove from Supabase
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .delete()
+        .eq('id', id);
+      if (error) {
+        console.error('Error deleting complaint from Supabase:', error.message);
+      }
+    } catch (e) {
+      console.error('Failed to delete from Supabase:', e);
+    }
+
+    // Remove from localStorage
+    const localList = localStorage.getItem('civiclens_complaints');
+    if (localList) {
+      const parsed = JSON.parse(localList).filter((c: any) => c.id !== id);
+      localStorage.setItem('civiclens_complaints', JSON.stringify(parsed));
+    }
+
+    // Also remove associated verification
+    const localVers = localStorage.getItem('civiclens_verifications');
+    if (localVers) {
+      const parsed = JSON.parse(localVers).filter((v: any) => v.complaintId !== id);
+      localStorage.setItem('civiclens_verifications', JSON.stringify(parsed));
+    }
+
+    // Remove from Supabase verifications
+    try {
+      await supabase.from('complaint_verifications').delete().eq('complaintId', id);
+    } catch {}
+
     return this.getComplaints();
   }
 }
