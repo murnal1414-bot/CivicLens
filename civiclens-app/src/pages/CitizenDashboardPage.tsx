@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar'
 import { civiclensApi } from '../services/api'
 import type { Complaint } from '../services/api'
 import { supabase } from '../services/supabase'
+import UniqueLoading from '@/components/ui/morph-loading'
 
 export default function CitizenDashboardPage() {
   const navigate = useNavigate()
@@ -55,9 +56,9 @@ export default function CitizenDashboardPage() {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-xs text-on-surface-variant uppercase tracking-widest">Loading Dashboard...</p>
+      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-6">
+        <UniqueLoading variant="morph" size="lg" className="opacity-80" />
+        <p className="text-xs text-on-surface-variant uppercase tracking-widest animate-pulse">Loading Dashboard…</p>
       </div>
     )
   }

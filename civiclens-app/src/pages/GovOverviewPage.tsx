@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import { supabase } from '../services/supabase'
@@ -7,9 +7,11 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 export default function GovOverviewPage() {
+  const navigate = useNavigate()
   const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '100%' })
   const [departments, setDepartments] = useState<any[]>([])
   const [recentActions, setRecentActions] = useState<any[]>([])
+  const [dismissed, setDismissed] = useState(false)
   const [alertInfo, setAlertInfo] = useState<any>({
     title: 'All Systems Operating Normally',
     desc: 'No active municipal issues reported. Citizen satisfaction rating remains high at 100%.',
@@ -241,7 +243,7 @@ export default function GovOverviewPage() {
   const kpis = [
     { icon: 'forum',           label: 'Total Complaints',   value: stats.total.toString(), trend: '+12%', trendUp: true,  accent: 'primary',   bar: 70 },
     { icon: 'pending_actions', label: 'Still Open',         value: stats.open.toString(),  trend: '+4%',  trendUp: false, accent: 'secondary', bar: Math.round((stats.open / Math.max(1, stats.total)) * 100) },
-    { icon: 'verified',        label: 'Fixed On Time',      value: stats.slaComplianceRate,  trend: '+2.5%',trendUp: true,  accent: 'primary',   bar: parseInt(stats.slaComplianceRate) || 100 },
+    { icon: 'verified', label: 'Fixed On Time', value: stats.slaComplianceRate, trend: '+2.5%', trendUp: true, accent: 'green-400', bar: parseInt(stats.slaComplianceRate) || 100 },
   ]
 
   const maxIssues = Math.max(1, ...departments.map(d => d.activeIssues))
@@ -289,6 +291,7 @@ export default function GovOverviewPage() {
         <main className="pt-20 px-6 pb-10 flex flex-col gap-5 w-full max-w-[1200px] mx-auto">
           
           {/* AI Alert Banner */}
+          {!dismissed && (
           <div className={`w-full bg-${alertInfo.color}-container/10 backdrop-blur-md rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-${alertInfo.color}/15 relative overflow-hidden`}>
             <div className="flex items-start gap-3 relative z-10">
               <div className={`w-9 h-9 rounded-full bg-${alertInfo.color}-container/20 flex items-center justify-center shrink-0 border border-${alertInfo.color}/20`}>
@@ -308,10 +311,17 @@ export default function GovOverviewPage() {
               </div>
             </div>
             <div className="flex items-center gap-2 relative z-10 shrink-0 self-end sm:self-center">
-              <button className={`px-4 py-1.5 rounded-lg border border-${alertInfo.color}/30 text-${alertInfo.color} text-xs font-semibold hover:bg-${alertInfo.color}/5 transition-colors`}>Dismiss</button>
-              <button className={`px-4 py-1.5 rounded-lg bg-${alertInfo.color} text-white text-xs font-semibold hover:opacity-90 transition-colors shadow`}>Take Action</button>
+              <button
+                onClick={() => setDismissed(true)}
+                className={`px-4 py-1.5 rounded-lg border border-${alertInfo.color}/30 text-${alertInfo.color} text-xs font-semibold hover:bg-${alertInfo.color}/5 transition-colors`}
+              >Dismiss</button>
+              <button
+                onClick={() => navigate('/gov/complaints')}
+                className={`px-4 py-1.5 rounded-lg bg-${alertInfo.color} text-white text-xs font-semibold hover:opacity-90 transition-colors shadow`}
+              >Take Action</button>
             </div>
           </div>
+          )}
 
           {/* KPI grid */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

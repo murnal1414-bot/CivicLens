@@ -6,6 +6,7 @@ import { supabase } from '../services/supabase'
 import { runRouterAgent } from '../services/ai'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
+import UniqueLoading from '@/components/ui/morph-loading'
 
 const SUBCATS: Record<string, string[]> = {
   water:      ['Water leaking from pipe', 'No water supply', 'Low water pressure', 'Dirty water'],
@@ -42,6 +43,15 @@ export default function CitizenPage() {
   const [micActive, setMic]       = useState(false)
   const [previews, setPreviews]   = useState<string[]>([])
   const [trackingId, setTracking] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const copyTicketId = () => {
+    if (!trackingId) return
+    navigator.clipboard.writeText(trackingId).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
+  }
   const [showModal, setModal]     = useState(false)
   const [gpsLoading, setGpsLoad]  = useState(false)
   const [gpsOk, setGpsOk]         = useState(false)
@@ -410,9 +420,9 @@ export default function CitizenPage() {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-4">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        <p className="text-xs text-on-surface-variant uppercase tracking-widest">Checking Authentication...</p>
+      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-6">
+        <UniqueLoading variant="morph" size="lg" className="opacity-80" />
+        <p className="text-xs text-on-surface-variant uppercase tracking-widest animate-pulse">Checking Authentication…</p>
       </div>
     )
   }
@@ -757,7 +767,18 @@ export default function CitizenPage() {
             <div className="bg-surface-container-lowest/60 border border-white/5 rounded-xl p-4 mb-6 flex flex-col gap-2.5 text-left">
               <div className="flex justify-between items-center text-xs">
                 <span className="text-on-surface-variant">Ticket ID</span>
-                <code className="bg-surface-container px-2 py-0.5 rounded text-primary font-bold">{trackingId}</code>
+                <div className="flex items-center gap-1.5">
+                  <code className="bg-surface-container px-2 py-0.5 rounded text-primary font-bold">{trackingId}</code>
+                  <button
+                    onClick={copyTicketId}
+                    title="Copy ticket ID"
+                    className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
+                      copied ? 'text-green-400 bg-green-500/10' : 'text-on-surface-variant hover:text-primary hover:bg-primary/10'
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[13px]">{copied ? 'check' : 'content_copy'}</span>
+                  </button>
+                </div>
               </div>
               <div className="flex justify-between items-center text-xs border-t border-white/5 pt-2">
                 <span className="text-on-surface-variant">Priority</span>
