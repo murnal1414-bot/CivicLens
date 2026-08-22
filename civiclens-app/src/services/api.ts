@@ -415,6 +415,8 @@ export const civiclensApi = {
         )
         if (verification.riskLevel === 'HIGH') {
           initialStatus = 'REJECTED'
+        } else if (verification.riskLevel === 'MEDIUM') {
+          initialStatus = 'PENDING_VERIFICATION'
         }
       } catch (e) {
         console.error("AI Evidence Verification failed, placing in review queue:", e)
@@ -427,7 +429,11 @@ export const civiclensApi = {
       id,
       date: dateStr,
       status: initialStatus,
-      slaRemaining: initialStatus === 'REJECTED' ? 'Rejected by AI' : '23h 59m left',
+      slaRemaining: initialStatus === 'REJECTED' 
+        ? 'Rejected by AI' 
+        : initialStatus === 'PENDING_VERIFICATION' 
+          ? 'Awaiting Verification' 
+          : '23h 59m left',
       slaTotal: 'Limit: 24 hours',
       initials: complaint.assignee ? complaint.assignee.split(' ').map(n => n[0]).join('').toUpperCase() : ''
     }
