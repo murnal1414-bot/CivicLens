@@ -61,6 +61,26 @@ export default function CitizenDashboardPage() {
     }
 
     checkAuthAndFetch()
+
+    // Poll for updates every 30 seconds (so new complaints appear without manual refresh)
+    const interval = setInterval(async () => {
+      try {
+        const { data: { session: s } } = await supabase.auth.getSession()
+        const ph = localStorage.getItem('citizen_phone') || ''
+        const em = s?.user?.email || ''
+        const allComplaints = await civiclensApi.getComplaints()
+        const vers = await civiclensApi.getVerifications()
+        setVerifications(vers)
+        const filtered = allComplaints.filter(c => {
+          const emailMatch = em && c.citizenEmail && c.citizenEmail.toLowerCase() === em.toLowerCase()
+          const phoneMatch = ph && c.citizenPhone && c.citizenPhone === ph
+          return emailMatch || phoneMatch
+        })
+        setComplaints(filtered)
+      } catch {}
+    }, 30000)
+
+    return () => clearInterval(interval)
   }, [navigate])
 
   if (loading) {

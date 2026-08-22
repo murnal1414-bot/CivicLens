@@ -372,7 +372,17 @@ export const civiclensApi = {
         const local = localStorage.getItem('civiclens_complaints');
         list = local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
       } else {
-        list = data || [];
+        // Merge Supabase data with localStorage to include newly added complaints
+        // (which may not yet be in Supabase due to base64 size limits)
+        const supabaseList = data || [];
+        const local = localStorage.getItem('civiclens_complaints');
+        const localList: Complaint[] = local ? JSON.parse(local) : [];
+        
+        // For complaints in Supabase, prefer Supabase data (more authoritative)
+        const supabaseIds = new Set(supabaseList.map((c: any) => c.id));
+        // Include local complaints not yet in Supabase, with full photoUrl
+        const localOnly = localList.filter((c: Complaint) => !supabaseIds.has(c.id));
+        list = [...supabaseList, ...localOnly];
       }
     } catch (e) {
       console.error('Database connection failed:', e);
@@ -383,9 +393,18 @@ export const civiclensApi = {
     // Merge with extended local storage metadata to show date/time overrides
     const extended = localStorage.getItem('civiclens_complaints_extended');
     const extendedMap = extended ? JSON.parse(extended) : {};
+    // Also restore full photoUrl from localStorage for base64 images
+    const local = localStorage.getItem('civiclens_complaints');
+    const localList: Complaint[] = local ? JSON.parse(local) : [];
+    const localPhotoMap = new Map(localList.map(c => [c.id, c.photoUrl]));
+    
     const mergedList = list.map(c => ({
       ...c,
-      ...(extendedMap[c.id] || {})
+      ...(extendedMap[c.id] || {}),
+      // Restore full base64 photoUrl from localStorage if Supabase has placeholder
+      photoUrl: (!c.photoUrl || c.photoUrl === '') && localPhotoMap.has(c.id)
+        ? localPhotoMap.get(c.id)
+        : c.photoUrl
     }));
 
     return clusterComplaints(mergedList)
@@ -439,9 +458,16 @@ export const civiclensApi = {
     }
 
     try {
+      // Strip base64 photoUrl before Supabase insert (too large for DB row)
+      const supabasePayload = {
+        ...newComplaint,
+        photoUrl: newComplaint.photoUrl?.startsWith('data:')
+          ? '' // store empty string; localStorage has the full image
+          : (newComplaint.photoUrl || '')
+      };
       const { error } = await supabase
         .from('complaints')
-        .insert(newComplaint);
+        .insert(supabasePayload);
 
       if (error) {
         console.error('Error saving complaint in Supabase:', error.message);
@@ -465,9 +491,11 @@ export const civiclensApi = {
   },
 
   async updateComplaint(id: string, updates: Partial<Complaint>): Promise<Complaint[]> {
+    // Strip base64 photoUrl from DB updates too
     const dbUpdates = { ...updates };
-    delete dbUpdates.dispatchTime;
-    delete dbUpdates.estimatedSolutionDate;
+    if (dbUpdates.photoUrl?.startsWith('data:')) {
+      delete dbUpdates.photoUrl;
+    }
 
     try {
       const { error } = await supabase

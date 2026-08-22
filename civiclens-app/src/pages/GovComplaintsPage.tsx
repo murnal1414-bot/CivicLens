@@ -491,7 +491,12 @@ export default function GovComplaintsPage() {
                             </td>
                             <td className="px-4 py-3.5">
                               <div className="flex flex-col">
-                                <span className={`font-semibold ${slaColor[c.priority]}`}>{c.slaRemaining}</span>
+                                <span className={`font-semibold ${
+                                  c.status === 'RESOLVED' ? 'text-green-400' :
+                                  c.status === 'REJECTED' ? 'text-error' :
+                                  c.status === 'PENDING_VERIFICATION' ? 'text-amber-400' :
+                                  slaColor[c.priority]
+                                }`}>{c.slaRemaining}</span>
                                 <span className="text-[10px] text-on-surface-variant mt-0.5">{c.slaTotal}</span>
                               </div>
                             </td>

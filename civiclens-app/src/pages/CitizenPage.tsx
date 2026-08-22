@@ -113,6 +113,18 @@ export default function CitizenPage() {
         setCitizenEmail(email)
         setCitizenPhone(phone || '')
         setLoading(false)
+        // Auto-fetch GPS on page load
+        if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            pos => {
+              setLat(pos.coords.latitude)
+              setLng(pos.coords.longitude)
+              setDeviceLat(pos.coords.latitude)
+              setDeviceLng(pos.coords.longitude)
+            },
+            () => {} // silently ignore if permission denied
+          )
+        }
       }
     }
     checkAuth()
