@@ -95,14 +95,14 @@ export async function runAnalystAgent(complaint: { category: string; location: s
 Provide an assessment of the complaint. Include:
 1. Ground Impact: Who/what is affected in the local area.
 2. Estimated Complexity: "Low", "Medium", or "High" with a brief explanation.
-3. Steps for Crew: A step-by-step list of instructions for the field team to resolve the issue.
+3. Steps for Crew: A list of at most 3 concise, actionable steps for the field team to resolve the issue.
 
 Respond STRICTLY with a JSON object, containing these fields:
 {
   "impact": "Detail the local community impact.",
   "complexity": "Low" | "Medium" | "High",
   "complexityReason": "Why this complexity level was chosen.",
-  "steps": ["Step 1...", "Step 2...", "Step 3..."]
+  "steps": ["Step 1 (Max 15 words)...", "Step 2...", "Step 3..."]
 }`
 
   const userPrompt = `Department: ${complaint.category}\nLocation: ${complaint.location}\nDescription: ${complaint.description}`

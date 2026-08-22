@@ -240,7 +240,7 @@ const DEFAULT_WORKERS: Worker[] = [
 
 // Helper function to cluster active complaints by area
 function clusterComplaints(list: Complaint[]): Complaint[] {
-  const activeList = list.filter(c => c.status !== 'RESOLVED')
+  const activeList = list.filter(c => c.status !== 'RESOLVED' && c.status !== 'REJECTED' && c.status !== 'PENDING_VERIFICATION')
   const clusters: Complaint[][] = []
 
   for (const c of activeList) {

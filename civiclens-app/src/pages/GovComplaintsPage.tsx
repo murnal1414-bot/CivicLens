@@ -514,9 +514,44 @@ export default function GovComplaintsPage() {
                                 <span className="text-[10px] text-on-surface-variant mt-0.5">{c.slaTotal}</span>
                               </div>
                             </td>
-                            <td className="px-4 py-3.5 text-right">
+                            <td className="px-4 py-3.5 text-right" onClick={(e) => e.stopPropagation()}>
                               <div className="flex items-center justify-end gap-2">
-                                {c.assignee ? (
+                                {activeTab === 'verification' ? (
+                                  <>
+                                    {c.status === 'PENDING_VERIFICATION' ? (
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => handleAcceptVerification(c.id)}
+                                          className="px-2.5 py-1 bg-green-600 hover:bg-green-500 text-white rounded text-[10px] font-semibold transition-all flex items-center gap-1 shrink-0 shadow-md"
+                                        >
+                                          <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                                          Accept
+                                        </button>
+                                        <button
+                                          onClick={() => { setTargetRejectionId(c.id); setShowRejectionModal(true) }}
+                                          className="px-2.5 py-1 bg-error/15 border border-error/30 text-error hover:bg-error/25 rounded text-[10px] font-semibold transition-all flex items-center gap-1 shrink-0"
+                                        >
+                                          <span className="material-symbols-outlined text-[12px]">cancel</span>
+                                          Reject
+                                        </button>
+                                      </div>
+                                    ) : c.status === 'REJECTED' ? (
+                                      <div className="flex items-center gap-2">
+                                        <button
+                                          onClick={() => handleAcceptVerification(c.id)}
+                                          className="px-2 py-1 bg-green-600/20 border border-green-500/20 text-green-400 hover:bg-green-600/30 rounded text-[10px] font-semibold transition-all flex items-center gap-1 shrink-0"
+                                        >
+                                          <span className="material-symbols-outlined text-[12px]">check_circle</span>
+                                          Override Accept
+                                        </button>
+                                        <div className="flex items-center gap-1 text-error text-[10px] font-semibold shrink-0">
+                                          <span className="material-symbols-outlined text-[14px]">cancel</span>
+                                          Rejected
+                                        </div>
+                                      </div>
+                                    ) : null}
+                                  </>
+                                ) : c.assignee ? (
                                   <>
                                     <span className="text-on-surface-variant">{c.assignee}</span>
                                     <div className="w-6 h-6 rounded-full bg-surface-container border border-white/10 flex items-center justify-center shrink-0">
@@ -817,7 +852,7 @@ export default function GovComplaintsPage() {
                             <div className="flex flex-col gap-2.5">
                               <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">AI Dispatch Guidelines</span>
                               <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col gap-2">
-                                {analystData.steps.map((step, idx) => (
+                                {analystData.steps.slice(0, 3).map((step, idx) => (
                                   <div key={idx} className="flex gap-2 text-[11px] text-on-surface-variant leading-relaxed">
                                     <span className="text-primary font-bold">{idx + 1}.</span>
                                     <span>{step}</span>
