@@ -407,7 +407,51 @@ export const civiclensApi = {
         : c.photoUrl
     }));
 
-    return clusterComplaints(mergedList)
+    // Deduplicate duplicate submissions (exact same category, location and description)
+    const seen = new Set<string>();
+    const deduplicatedList: Complaint[] = [];
+    const duplicatesToRemove: string[] = [];
+
+    for (const c of mergedList) {
+      const desc = (c.description || '').trim().toLowerCase();
+      const loc = (c.location || '').trim().toLowerCase().replace(/^🚨\s*\[major cluster[^\]]*\]\s*/i, '');
+      const cat = (c.category || '').trim().toLowerCase();
+      const key = `${cat}|${loc}|${desc}`;
+
+      if (seen.has(key)) {
+        duplicatesToRemove.push(c.id);
+      } else {
+        seen.add(key);
+        deduplicatedList.push(c);
+      }
+    }
+
+    // Asynchronously delete duplicates from databases and localStorage
+    if (duplicatesToRemove.length > 0) {
+      // Clean local storage list
+      const localString = localStorage.getItem('civiclens_complaints');
+      if (localString) {
+        try {
+          const parsed = JSON.parse(localString);
+          const cleaned = parsed.filter((c: any) => !duplicatesToRemove.includes(c.id));
+          localStorage.setItem('civiclens_complaints', JSON.stringify(cleaned));
+        } catch (e) {
+          console.error("Localstorage cleanup error:", e);
+        }
+      }
+      
+      // Clean Supabase
+      for (const idToDel of duplicatesToRemove) {
+        supabase.from('complaints').delete().eq('id', idToDel).then(({ error }) => {
+          if (error) console.error("Error deleting duplicate from Supabase:", error.message);
+        });
+        supabase.from('complaint_verifications').delete().eq('complaintId', idToDel).then(({ error }) => {
+          if (error) console.error("Error deleting duplicate verification:", error.message);
+        });
+      }
+    }
+
+    return clusterComplaints(deduplicatedList)
   },
 
   async addComplaint(

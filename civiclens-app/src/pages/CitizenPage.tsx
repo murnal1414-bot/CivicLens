@@ -551,6 +551,7 @@ export default function CitizenPage() {
   }
 
   const submit = async () => {
+    if (submitting) return
     if (!text.trim()) { setError('Please describe the problem before submitting.'); return }
     setError('')
     setSubmitting(true)
@@ -1176,9 +1177,17 @@ export default function CitizenPage() {
                   </button>
                   <button 
                     onClick={submit} 
-                    className="flex-1 btn-primary py-2 rounded-xl text-xs font-semibold shadow-lg hover:opacity-95 transition-all"
+                    disabled={submitting}
+                    className="flex-1 btn-primary py-2 rounded-xl text-xs font-semibold shadow-lg hover:opacity-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1.5"
                   >
-                    {verificationResult.riskLevel === 'HIGH' ? 'Submit as Rejected' : 'Submit Complaint'}
+                    {submitting ? (
+                      <>
+                        <span className="material-symbols-outlined text-[14px] animate-spin">progress_activity</span>
+                        Submitting...
+                      </>
+                    ) : (
+                      verificationResult.riskLevel === 'HIGH' ? 'Submit as Rejected' : 'Submit Complaint'
+                    )}
                   </button>
                 </div>
               </div>
