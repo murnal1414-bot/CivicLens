@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { civiclensApi } from '../services/api'
 import type { Complaint } from '../services/api'
-import { supabase, GOV_EMAIL_WHITELIST } from '../services/supabase'
+import { supabase } from '../services/supabase'
 
 export default function CitizenDashboardPage() {
   const navigate = useNavigate()
@@ -19,9 +19,8 @@ export default function CitizenDashboardPage() {
       const email = session?.user?.email || ''
 
       // If user is logged in as an officer, redirect them to the officer overview
-      const hasOfficerStorage = !!localStorage.getItem('officer_email') || !!localStorage.getItem('officer_username')
-      const isWhitelistedSession = email && GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())
-      if (hasOfficerStorage || isWhitelistedSession) {
+      const activeRole = localStorage.getItem('active_role')
+      if (activeRole === 'officer') {
         navigate('/gov/overview')
         return
       }

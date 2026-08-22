@@ -30,6 +30,7 @@ export default function LoginPage() {
         // If checking for government portal access
         if (tab === 'officer') {
           if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+            localStorage.setItem('active_role', 'officer')
             localStorage.removeItem('citizen_phone') // Clear citizen state!
             navigate('/gov/overview')
           } else {
@@ -38,6 +39,7 @@ export default function LoginPage() {
           }
         } else {
           // Citizen flow: go to citizen dashboard
+          localStorage.setItem('active_role', 'citizen')
           localStorage.removeItem('officer_email') // Clear officer state!
           localStorage.removeItem('officer_username')
           navigate('/citizen/dashboard')
@@ -52,6 +54,7 @@ export default function LoginPage() {
         const email = session.user.email || ''
         if (tab === 'officer') {
           if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+            localStorage.setItem('active_role', 'officer')
             localStorage.removeItem('citizen_phone') // Clear citizen state!
             navigate('/gov/overview')
           } else {
@@ -59,6 +62,7 @@ export default function LoginPage() {
             await supabase.auth.signOut()
           }
         } else {
+          localStorage.setItem('active_role', 'citizen')
           localStorage.removeItem('officer_email') // Clear officer state!
           localStorage.removeItem('officer_username')
           navigate('/citizen/dashboard')
@@ -117,6 +121,7 @@ export default function LoginPage() {
       }
       setMessage('')
       // Mock login: Store phone in localStorage and redirect to citizen page
+      localStorage.setItem('active_role', 'citizen')
       localStorage.removeItem('officer_email')
       localStorage.removeItem('officer_username')
       localStorage.setItem('citizen_phone', phone.trim())
@@ -136,6 +141,7 @@ export default function LoginPage() {
       }
       setMessage('')
       // Mock login: Store officer email in localStorage and redirect to officer overview
+      localStorage.setItem('active_role', 'officer')
       localStorage.removeItem('citizen_phone')
       localStorage.setItem('officer_email', username.trim().toLowerCase())
       navigate('/gov/overview')

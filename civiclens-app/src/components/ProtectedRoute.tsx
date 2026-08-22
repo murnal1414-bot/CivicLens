@@ -11,30 +11,33 @@ export default function ProtectedRoute() {
       const { data: { session } } = await supabase.auth.getSession()
       const officerEmail = localStorage.getItem('officer_email')
       const officerUser = localStorage.getItem('officer_username')
+      const activeRole = localStorage.getItem('active_role')
 
       let isAllowed = false
 
-      if (session?.user?.email) {
-        const email = session.user.email.toLowerCase()
-        if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email)) {
-          isAllowed = true
-        }
-      }
-
-      if (officerEmail && GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(officerEmail.toLowerCase())) {
-        isAllowed = true
-      }
-
-      // If mock login was used with a whitelisted email (or username that matches an email)
-      if (officerUser) {
-        // If it's a simple username, allow it as legacy mock, but if it has @ it must be in the whitelist
-        if (officerUser.includes('@')) {
-          if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(officerUser.toLowerCase())) {
+      if (activeRole === 'officer') {
+        if (session?.user?.email) {
+          const email = session.user.email.toLowerCase()
+          if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email)) {
             isAllowed = true
           }
-        } else {
-          // If it's just 'shivam' or any other username, allow it
+        }
+
+        if (officerEmail && GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(officerEmail.toLowerCase())) {
           isAllowed = true
+        }
+
+        // If mock login was used with a whitelisted email (or username that matches an email)
+        if (officerUser) {
+          // If it's a simple username, allow it as legacy mock, but if it has @ it must be in the whitelist
+          if (officerUser.includes('@')) {
+            if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(officerUser.toLowerCase())) {
+              isAllowed = true
+            }
+          } else {
+            // If it's just 'shivam' or any other username, allow it
+            isAllowed = true
+          }
         }
       }
 
@@ -45,13 +48,16 @@ export default function ProtectedRoute() {
     checkAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user?.email) {
+      const activeRole = localStorage.getItem('active_role')
+      if (activeRole === 'officer' && session?.user?.email) {
         const email = session.user.email.toLowerCase()
         if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email)) {
           setAllowed(true)
         } else {
           setAllowed(false)
         }
+      } else if (activeRole !== 'officer') {
+        setAllowed(false)
       }
     })
 

@@ -51,6 +51,7 @@ export default function Navbar() {
     localStorage.removeItem('citizen_phone')
     localStorage.removeItem('officer_email')
     localStorage.removeItem('officer_username')
+    localStorage.removeItem('active_role')
     setIsLoggedIn(false)
     setSessionEmail('')
     window.location.href = '/'
