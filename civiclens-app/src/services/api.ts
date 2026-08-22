@@ -509,10 +509,27 @@ export const civiclensApi = {
     // Then save to Supabase (strip base64 photoUrl — too large for DB row)
     try {
       const supabasePayload = {
-        ...newComplaint,
+        id: newComplaint.id,
+        date: newComplaint.date,
+        category: newComplaint.category,
+        categoryIcon: newComplaint.categoryIcon,
+        location: newComplaint.location,
+        density: newComplaint.density || 'Low',
+        priority: newComplaint.priority,
+        status: newComplaint.status,
+        slaRemaining: newComplaint.slaRemaining,
+        slaTotal: newComplaint.slaTotal,
+        assignee: newComplaint.assignee || '',
+        initials: newComplaint.initials || '',
+        description: newComplaint.description,
+        voiceUrl: newComplaint.voiceUrl || '',
         photoUrl: newComplaint.photoUrl?.startsWith('data:')
           ? '' // store empty string; localStorage has the full image
-          : (newComplaint.photoUrl || '')
+          : (newComplaint.photoUrl || ''),
+        citizenEmail: newComplaint.citizenEmail || '',
+        citizenPhone: newComplaint.citizenPhone || '',
+        latitude: newComplaint.latitude || null,
+        longitude: newComplaint.longitude || null
       };
       const { error } = await supabase
         .from('complaints')

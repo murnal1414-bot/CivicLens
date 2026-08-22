@@ -48,15 +48,16 @@ async function callLLM(model: string, systemPrompt: string, userPrompt: string) 
 export async function runRouterAgent(description: string) {
   const systemPrompt = `You are the AI Routing & Dispatch Agent for CivicLens. 
 Analyze the citizen's complaint. Classify it into one of these official departments:
-- "Water Supply" (for leakages, low pressure, dirty water)
-- "Drainage & Sewerage" (for blocked drains, overflowing sewers)
-- "Health & Sanitation" (for garbage dumps, public toilet issues)
-- "Electrical & Mechanical" (for streetlights, exposed wires, transformers)
-- "Roads & Public Works" (for potholes, broken pavements, road repairs)
-- "Parks & Gardens" (for overgrown parks, broken park fences/benches)
-- "Fire Safety" (for fire hazards, blocked exits)
-- "Revenue" (for property tax issues)
-- "Housing & Environment" (for bad smell, illegal constructions, pollution)
+- "Water Work and Drainage Department" (leakages, drainage, sewerage, low pressure, dirty water)
+- "Public Work Department" (potholes, road maintenance, public buildings)
+- "Health Department (Sanitation and Solid Waste Management)" (garbage piles, public sanitation, public toilet cleanliness)
+- "Electrical and Mechanical Department" (broken streetlights, electricity issues, transformers)
+- "Fire Department" (fire hazards, building safety, fire exits)
+- "Revenue Department" (municipal tax, billing disputes)
+- "Housing & Environmental Department" (illegal construction, environmental pollution, noise)
+- "Education Department" (government school infrastructure, classrooms, government school washrooms/facilities)
+- "Zoo Department" (Kamla Nehru Zoo animal issues or maintenance)
+- "Garden Department & Regional Park" (parks, trees, overgrown garden weeds)
 
 Determine the priority: "CRITICAL", "HIGH", or "MEDIUM".
 Immediate life/property threat (Fire, high-pressure flooding) is CRITICAL.
