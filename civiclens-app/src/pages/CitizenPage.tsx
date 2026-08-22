@@ -92,7 +92,7 @@ export default function CitizenPage() {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map)
 
-      // Custom marker icon
+      // Fix default marker icon issue in Leaflet
       const markerIcon = L.icon({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -103,6 +103,13 @@ export default function CitizenPage() {
       const marker = L.marker([lat, lng], { icon: markerIcon, draggable: true }).addTo(map)
       markerRef.current = marker
       mapInstance.current = map
+
+      // Force recalculation of map size to prevent gray boxes
+      setTimeout(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize()
+        }
+      }, 300)
 
       // On dragend, reverse geocode to update address
       marker.on('dragend', async () => {
