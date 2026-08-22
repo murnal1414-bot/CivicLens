@@ -196,14 +196,14 @@
 
   /* ─── Status Badges ─── */
   .badge { @apply inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide border; }
-  .badge-submitted  { @apply bg-gray-200/50 text-gray-700 border-gray-300/30 dark:bg-surface-container-highest/60 dark:text-on-surface-variant dark:border-white/[0.08]; }
+  .badge-submitted  { @apply bg-gray-200/50 text-gray-700 border-gray-300/30 dark:bg-gray-800/60 dark:text-on-surface-variant dark:border-white/[0.08]; }
   .badge-accepted   { @apply bg-blue-50 text-blue-600 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-500/20; }
   .badge-inprogress { @apply bg-amber-50 text-amber-600 border-amber-200 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-500/20; }
   .badge-resolved   { @apply bg-green-50 text-green-600 border-green-200 dark:bg-green-900/30 dark:text-green-300 dark:border-green-500/20; }
-  .badge-rejected   { @apply bg-red-50 text-red-600 border-red-200 dark:bg-error-container/30 dark:text-error dark:border-error/20; }
-  .badge-critical   { @apply bg-red-50 text-red-600 border-red-200 dark:bg-error-container/20 dark:text-error dark:border-error/30; }
-  .badge-high       { @apply bg-orange-50 text-orange-600 border-orange-200 dark:bg-secondary-container/20 dark:text-secondary dark:border-secondary/30; }
-  .badge-medium     { @apply bg-gray-200/50 text-gray-700 border-gray-300/30 dark:bg-surface-container-highest/60 dark:text-on-surface-variant dark:border-white/[0.08]; }
+  .badge-rejected   { @apply bg-red-50 text-red-600 border-red-200 dark:bg-red-900/30 dark:text-error dark:border-red-500/20; }
+  .badge-critical   { @apply bg-red-50 text-red-600 border-red-200 dark:bg-red-900/20 dark:text-error dark:border-red-500/30; }
+  .badge-high       { @apply bg-orange-50 text-orange-600 border-orange-200 dark:bg-gray-700/20 dark:text-secondary dark:border-gray-500/30; }
+  .badge-medium     { @apply bg-gray-200/50 text-gray-700 border-gray-300/30 dark:bg-gray-800/60 dark:text-on-surface-variant dark:border-white/[0.08]; }
 
   /* ─── Nav link ─── */
   .nav-link {
@@ -212,7 +212,7 @@
   .dark .nav-link {
     @apply text-on-surface-variant;
   }
-  .nav-link:hover { @apply bg-gray-200 text-gray-900 dark:bg-surface-container-high/80 dark:text-on-surface; }
+  .nav-link:hover { @apply bg-gray-200 text-gray-900 dark:bg-gray-800/80 dark:text-on-surface; }
   .nav-link.active {
     @apply bg-primary text-on-primary;
     box-shadow: 0 0 10px rgba(0,0,0,0.1);
@@ -246,7 +246,7 @@
     placeholder:text-gray-400 focus:outline-none focus:border-gray-500 transition-all;
   }
   .dark .form-input {
-    @apply bg-surface-dim/50 border border-white/10 text-on-surface placeholder:text-on-surface-variant/40 focus:border-white/30;
+    @apply bg-gray-900/50 border border-white/10 text-on-surface placeholder:text-gray-500 focus:border-white/30;
   }
   .form-input:focus { @apply bg-gray-50; }
   .dark .form-input:focus { background: rgba(20,19,19,0.7); }
