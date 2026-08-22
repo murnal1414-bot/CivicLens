@@ -11,12 +11,24 @@ const activity = [
 
 export default function GovOverviewPage() {
   const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '0%' })
-  const departments = civiclensApi.getDepartments().slice(0, 5)
+  const [departments, setDepartments] = useState<any[]>([])
 
   useEffect(() => {
     const load = async () => {
       const data = await civiclensApi.getKpis()
       setStats(data)
+
+      const complaints = await civiclensApi.getComplaints()
+      const rawDepts = civiclensApi.getDepartments()
+      
+      const computedDepts = rawDepts.map(d => {
+        const activeCount = complaints.filter(c => c.category.toLowerCase() === d.name.toLowerCase() && c.status !== 'RESOLVED').length
+        return {
+          ...d,
+          activeIssues: activeCount
+        }
+      })
+      setDepartments(computedDepts.slice(0, 5))
     }
     load()
   }, [])

@@ -16,7 +16,7 @@ const workers = [
 
 export default function GovAnalyticsPage() {
   const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '0%' })
-  const departments = civiclensApi.getDepartments()
+  const [departments, setDepartments] = useState<any[]>([])
   const totalWorkers = departments.reduce((sum, d) => sum + d.workersCount, 0)
   const activeIssues = stats.open
 
@@ -27,6 +27,18 @@ export default function GovAnalyticsPage() {
     const load = async () => {
       const data = await civiclensApi.getKpis()
       setStats(data)
+
+      const complaints = await civiclensApi.getComplaints()
+      const rawDepts = civiclensApi.getDepartments()
+      
+      const computedDepts = rawDepts.map(d => {
+        const activeCount = complaints.filter(c => c.category.toLowerCase() === d.name.toLowerCase() && c.status !== 'RESOLVED').length
+        return {
+          ...d,
+          activeIssues: activeCount
+        }
+      })
+      setDepartments(computedDepts)
     }
     load()
   }, [])

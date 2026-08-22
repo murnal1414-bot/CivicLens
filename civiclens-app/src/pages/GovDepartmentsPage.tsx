@@ -1,18 +1,42 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import type { Department } from '../services/api'
 
 export default function GovDepartmentsPage() {
-  const [depts, setDepts] = useState<Department[]>(() => civiclensApi.getDepartments())
+  const [depts, setDepts] = useState<Department[]>([])
   const [searchTerm, setSearchTerm] = useState('')
+
+  useEffect(() => {
+    const load = async () => {
+      const complaints = await civiclensApi.getComplaints()
+      const rawDepts = civiclensApi.getDepartments()
+      
+      const computedDepts = rawDepts.map(d => {
+        const activeCount = complaints.filter(c => c.category.toLowerCase() === d.name.toLowerCase() && c.status !== 'RESOLVED').length
+        return {
+          ...d,
+          activeIssues: activeCount
+        }
+      })
+      setDepts(computedDepts)
+    }
+    load()
+  }, [])
 
   const toggleStatus = (id: string) => {
     const target = depts.find(d => d.id === id)
     if (target) {
       const nextStatus = target.status === 'Active' ? 'Under Review' : 'Active'
       const updated = civiclensApi.updateDepartment(id, { status: nextStatus })
-      setDepts(updated)
+      const mapped = updated.map(d => {
+        const current = depts.find(c => c.id === d.id)
+        return {
+          ...d,
+          activeIssues: current ? current.activeIssues : d.activeIssues
+        }
+      })
+      setDepts(mapped)
     }
   }
 
@@ -22,7 +46,7 @@ export default function GovDepartmentsPage() {
 
   const activeIssuesSum = depts.reduce((sum, d) => sum + d.activeIssues, 0)
   const workersSum = depts.reduce((sum, d) => sum + d.workersCount, 0)
-  const avgSla = Math.round(depts.reduce((sum, d) => sum + d.onTimeRate, 0) / depts.length)
+  const avgSla = depts.length > 0 ? Math.round(depts.reduce((sum, d) => sum + d.onTimeRate, 0) / depts.length) : 0
 
   return (
     <div className="dark flex min-h-screen bg-background text-sm">
