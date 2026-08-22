@@ -79,7 +79,7 @@ export default function GovDepartmentsPage() {
   const avgSla = depts.length > 0 ? Math.round(depts.reduce((sum, d) => sum + d.onTimeRate, 0) / depts.length) : 100
 
   return (
-    <div className="dark flex min-h-screen bg-background text-sm">
+    <div className="flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
       {loading ? (

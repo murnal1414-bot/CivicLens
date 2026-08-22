@@ -6,6 +6,106 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --color-surface-variant: #e2e8f0;
+    --color-surface-container-lowest: #ffffff;
+    --color-surface-dim: #f1f5f9;
+    --color-on-primary-container: #0f172a;
+    --color-on-primary-fixed-variant: #334155;
+    --color-tertiary-fixed: #f1f5f9;
+    --color-on-tertiary-fixed: #0f172a;
+    --color-surface-bright: #ffffff;
+    --color-error-container: #fee2e2;
+    --color-on-surface: #0f172a;
+    --color-on-background: #0f172a;
+    --color-tertiary-container: #e2e8f0;
+    --color-primary-fixed-dim: #cbd5e1;
+    --color-surface-container-high: #e2e8f0;
+    --color-primary-container: #e2e8f0;
+    --color-tertiary-fixed-dim: #e2e8f0;
+    --color-inverse-primary: #94a3b8;
+    --color-surface-container: #f1f5f9;
+    --color-outline: #cbd5e1;
+    --color-inverse-surface: #0f172a;
+    --color-on-primary: #ffffff;
+    --color-on-secondary-fixed: #0f172a;
+    --color-on-error-container: #7f1d1d;
+    --color-secondary: #334155;
+    --color-background: #f8fafc;
+    --color-on-tertiary-fixed-variant: #334155;
+    --color-outline-variant: #e2e8f0;
+    --color-on-secondary-fixed-variant: #334155;
+    --color-on-primary-fixed: #0f172a;
+    --color-on-secondary-container: #0f172a;
+    --color-on-tertiary: #ffffff;
+    --color-surface: #f8fafc;
+    --color-on-error: #ffffff;
+    --color-error: #ef4444;
+    --color-secondary-fixed: #f1f5f9;
+    --color-surface-tint: #0f172a;
+    --color-on-tertiary-container: #0f172a;
+    --color-on-surface-variant: #475569;
+    --color-primary-fixed: #e2e8f0;
+    --color-primary: #0f172a;
+    --color-tertiary: #0f172a;
+    --color-secondary-fixed-dim: #e2e8f0;
+    --color-surface-container-highest: #cbd5e1;
+    --color-secondary-container: #e2e8f0;
+    --color-surface-container-low: #f8fafc;
+    --color-on-secondary: #ffffff;
+    --color-inverse-on-surface: #f8fafc;
+  }
+
+  .dark {
+    --color-surface-variant: #353434;
+    --color-surface-container-lowest: #0e0e0e;
+    --color-surface-dim: #141313;
+    --color-on-primary-container: #636565;
+    --color-on-primary-fixed-variant: #454747;
+    --color-tertiary-fixed: #e2e2e2;
+    --color-on-tertiary-fixed: #1a1c1c;
+    --color-surface-bright: #3a3939;
+    --color-error-container: #93000a;
+    --color-on-surface: #e5e2e1;
+    --color-on-background: #e5e2e1;
+    --color-tertiary-container: #e2e2e2;
+    --color-primary-fixed-dim: #c6c6c7;
+    --color-surface-container-high: #2a2a2a;
+    --color-primary-container: #e2e2e2;
+    --color-tertiary-fixed-dim: #c6c6c7;
+    --color-inverse-primary: #5d5f5f;
+    --color-surface-container: #201f1f;
+    --color-outline: #8e9192;
+    --color-inverse-surface: #e5e2e1;
+    --color-on-primary: #2f3131;
+    --color-on-secondary-fixed: #171c20;
+    --color-on-error-container: #ffdad6;
+    --color-secondary: #c3c7cd;
+    --color-background: #141313;
+    --color-on-tertiary-fixed-variant: #454747;
+    --color-outline-variant: #444748;
+    --color-on-secondary-fixed-variant: #43474c;
+    --color-on-primary-fixed: #1a1c1c;
+    --color-on-secondary-container: #b4b9bf;
+    --color-on-tertiary: #2f3131;
+    --color-surface: #141313;
+    --color-on-error: #690005;
+    --color-error: #ffb4ab;
+    --color-secondary-fixed: #dfe3e9;
+    --color-surface-tint: #c6c6c7;
+    --color-on-tertiary-container: #636565;
+    --color-on-surface-variant: #c4c7c8;
+    --color-primary-fixed: #e2e2e2;
+    --color-primary: #ffffff;
+    --color-tertiary: #ffffff;
+    --color-secondary-fixed-dim: #c3c7cd;
+    --color-surface-container-highest: #353434;
+    --color-secondary-container: #454a4f;
+    --color-surface-container-low: #1c1b1b;
+    --color-on-secondary: #2c3136;
+    --color-inverse-on-surface: #313030;
+  }
+
   *, *::before, *::after { box-sizing: border-box; }
 
   html {
@@ -14,12 +114,8 @@
   }
 
   body {
-    @apply bg-gray-100 text-gray-900 font-sans overflow-x-hidden;
+    @apply bg-background text-on-background font-sans overflow-x-hidden;
     transition: background-color 200ms ease, color 200ms ease;
-  }
-
-  .dark body {
-    @apply bg-background text-on-background;
   }
 
   ::-webkit-scrollbar { width: 4px; }

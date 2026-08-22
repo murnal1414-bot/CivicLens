@@ -342,7 +342,7 @@ export default function GovComplaintsPage() {
   }
 
   return (
-    <div className="dark flex min-h-screen bg-background text-sm">
+    <div className="flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
       {loading ? (

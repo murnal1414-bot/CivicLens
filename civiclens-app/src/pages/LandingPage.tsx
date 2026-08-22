@@ -197,7 +197,7 @@ function Footer() {
 /* ── Main Page ────────────────────────────────────────────── */
 export default function LandingPage() {
   return (
-    <div className="dark bg-black min-h-screen flex flex-col text-white relative">
+    <div className="bg-black min-h-screen flex flex-col text-white relative">
       <BackgroundPixelStars />
       <Navbar />
 

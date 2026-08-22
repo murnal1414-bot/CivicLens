@@ -254,7 +254,7 @@ export default function GovOverviewPage() {
     pts: d.activeIssues.toString()
   }))
   return (
-    <div className="dark flex min-h-screen bg-background text-sm">
+    <div className="flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
       {/* Main panel - offset by w-60 sidebar */}

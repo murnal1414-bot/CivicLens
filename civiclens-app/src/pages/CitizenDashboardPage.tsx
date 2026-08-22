@@ -85,7 +85,7 @@ export default function CitizenDashboardPage() {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-6">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
         <UniqueLoading variant="morph" size="lg" className="opacity-80" />
         <p className="text-xs text-on-surface-variant uppercase tracking-widest animate-pulse">Loading Dashboard…</p>
       </div>
@@ -97,7 +97,7 @@ export default function CitizenDashboardPage() {
   const pendingComplaints = totalReported - fixedComplaints
 
   return (
-    <div className="dark min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="pt-24 pb-16 px-4 md:px-10 max-w-[1200px] mx-auto flex flex-col gap-8">

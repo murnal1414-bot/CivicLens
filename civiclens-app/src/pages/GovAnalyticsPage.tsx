@@ -206,7 +206,7 @@ export default function GovAnalyticsPage() {
   const incomingArea = `${incomingPath} L800,200 L0,200 Z`
 
   return (
-    <div className="dark flex min-h-screen bg-background text-sm">
+    <div className="flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
       {loading ? (

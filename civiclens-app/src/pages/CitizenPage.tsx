@@ -690,7 +690,7 @@ export default function CitizenPage() {
 
   if (loading) {
     return (
-      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-6">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center gap-6">
         <UniqueLoading variant="morph" size="lg" className="opacity-80" />
         <p className="text-xs text-on-surface-variant uppercase tracking-widest animate-pulse">Checking Authentication…</p>
       </div>
@@ -698,7 +698,7 @@ export default function CitizenPage() {
   }
 
   return (
-    <div className="dark min-h-screen bg-background">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <main className="pt-16 pb-16">
