@@ -4,8 +4,8 @@ const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions'
 
 // Different models assigned to different agents to leverage their strengths
 const AGENT_MODELS = {
-  ROUTER_AGENT: 'google/gemma-4-26b-a4b-it:free',
-  ANALYST_AGENT: 'google/gemma-4-31b-it:free',
+  ROUTER_AGENT: 'openrouter/free',
+  ANALYST_AGENT: 'openrouter/free',
   REASONING_AGENT: 'nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free',
 }
 
