@@ -46,6 +46,26 @@ export default function Navbar() {
     }
   }, [])
 
+  useEffect(() => {
+    // Dynamically inject Google Translate script and init callback
+    if (!document.getElementById('google-translate-script')) {
+      const script = document.createElement('script')
+      script.id = 'google-translate-script'
+      script.type = 'text/javascript'
+      script.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit'
+      document.body.appendChild(script)
+
+      ;(window as any).googleTranslateElementInit = () => {
+        new (window as any).google.translate.TranslateElement({
+          pageLanguage: 'en',
+          includedLanguages: 'en,hi,mr,gu,ta,te,kn,ml,pa,ur,bn,or,as', // Major Indian Languages + English
+          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
+          autoDisplay: false
+        }, 'google_translate_element')
+      }
+    }
+  }, [])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     localStorage.removeItem('citizen_phone')
@@ -148,7 +168,7 @@ export default function Navbar() {
               <span className="material-symbols-outlined text-[20px]">account_balance</span>
               <span className="text-sm font-semibold tracking-tight">CivicLens</span>
             </Link>
-
+ 
             {/* Navigation menu */}
             <NavigationMenu className="hidden md:block">
               <NavigationMenuList className="gap-1">
@@ -170,9 +190,10 @@ export default function Navbar() {
             </NavigationMenu>
           </div>
         </div>
-
+ 
         {/* Right side */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-2.5 shrink-0">
+          <div id="google_translate_element" className="flex items-center" />
           <ThemeToggle />
           
           {isLoggedIn ? (
