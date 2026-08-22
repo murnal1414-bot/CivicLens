@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { civiclensApi } from '../services/api'
-import type { Complaint } from '../services/api'
+import type { Complaint, Worker, ComplaintVerification } from '../services/api'
 import { supabase } from '../services/supabase'
 import UniqueLoading from '@/components/ui/morph-loading'
 
@@ -12,6 +12,9 @@ export default function CitizenDashboardPage() {
   const [complaints, setComplaints] = useState<Complaint[]>([])
   const [citizenEmail, setCitizenEmail] = useState('')
   const [citizenPhone, setCitizenPhone] = useState('')
+  const [workers, setWorkers] = useState<Worker[]>([])
+  const [verifications, setVerifications] = useState<ComplaintVerification[]>([])
+  const [selectedId, setSelectedId] = useState<string | null>(null)
 
   useEffect(() => {
     const checkAuthAndFetch = async () => {
@@ -37,6 +40,12 @@ export default function CitizenDashboardPage() {
       // Fetch complaints from Supabase
       try {
         const allComplaints = await civiclensApi.getComplaints()
+        const vers = await civiclensApi.getVerifications()
+        const workersList = civiclensApi.getWorkers()
+        
+        setVerifications(vers)
+        setWorkers(workersList)
+
         // Filter complaints reported by this citizen
         const filtered = allComplaints.filter(c => {
           const emailMatch = email && c.citizenEmail && c.citizenEmail.toLowerCase() === email.toLowerCase()
@@ -45,7 +54,7 @@ export default function CitizenDashboardPage() {
         })
         setComplaints(filtered)
       } catch (e) {
-        console.error('Failed to load citizen complaints', e)
+        console.error('Failed to load citizen data', e)
       } finally {
         setLoading(false)
       }
@@ -155,12 +164,17 @@ export default function CitizenDashboardPage() {
                     <th className="py-3 px-4">Category</th>
                     <th className="py-3 px-4">Location</th>
                     <th className="py-3 px-4">Status</th>
+                    <th className="py-3 px-4">Assigned Workforce</th>
                     <th className="py-3 px-4">Estimated Resolution / ETA</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/[0.04] text-on-surface">
                   {complaints.map((c) => (
-                    <tr key={c.id} className="hover:bg-surface-container-low/30 transition-colors">
+                    <tr 
+                      key={c.id} 
+                      onClick={() => setSelectedId(c.id)}
+                      className="hover:bg-surface-container-low/30 transition-colors cursor-pointer"
+                    >
                       <td className="py-3.5 px-4">
                         <div className="flex flex-col">
                           <span className="font-semibold text-primary">{c.id}</span>
@@ -173,7 +187,7 @@ export default function CitizenDashboardPage() {
                           <span className="font-medium">{c.category}</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-4 text-on-surface-variant truncate max-w-[200px]">
+                      <td className="py-3.5 px-4 text-on-surface-variant truncate max-w-[160px]">
                         {c.location}
                       </td>
                       <td className="py-3.5 px-4">
@@ -182,17 +196,75 @@ export default function CitizenDashboardPage() {
                             ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
                             : c.status === 'ASSIGNED' 
                               ? 'bg-secondary/10 text-secondary border border-secondary/20' 
-                              : 'bg-primary/10 text-primary border border-primary/20'
+                              : c.status === 'PENDING_VERIFICATION'
+                                ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                                : c.status === 'REJECTED'
+                                  ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                                  : 'bg-primary/10 text-primary border border-primary/20'
                         }`}>
                           <span className={`w-1 h-1 rounded-full ${
-                            c.status === 'RESOLVED' ? 'bg-green-400' : c.status === 'ASSIGNED' ? 'bg-secondary' : 'bg-primary animate-pulse'
+                            c.status === 'RESOLVED' 
+                              ? 'bg-green-400' 
+                              : c.status === 'ASSIGNED' 
+                                ? 'bg-secondary' 
+                                : c.status === 'PENDING_VERIFICATION'
+                                  ? 'bg-yellow-400'
+                                  : c.status === 'REJECTED'
+                                    ? 'bg-red-400'
+                                    : 'bg-primary animate-pulse'
                           }`} />
                           {c.status}
                         </span>
                       </td>
+                      <td className="py-3.5 px-4 font-medium text-left">
+                        {(() => {
+                          if (c.status === 'ASSIGNED' || c.status === 'RESOLVED') {
+                            const staff = workers.find(w => w.name.toLowerCase() === c.assignee.toLowerCase())
+                            return (
+                              <div className="flex flex-col gap-0.5">
+                                <span className="text-on-surface font-semibold flex items-center gap-1">
+                                  <span className="material-symbols-outlined text-[13px] text-primary">person</span>
+                                  {c.assignee}
+                                </span>
+                                {staff?.phone && (
+                                  <span className="text-[10px] text-on-surface-variant flex items-center gap-1">
+                                    <span className="material-symbols-outlined text-[11px] text-on-surface-variant/70">call</span>
+                                    {staff.phone}
+                                  </span>
+                                )}
+                              </div>
+                            )
+                          }
+                          if (c.status === 'REJECTED') {
+                            const ver = verifications.find(v => v.complaintId === c.id)
+                            return (
+                              <span className="text-error font-semibold text-[10px] flex items-center gap-1.5 line-clamp-1 max-w-[160px]" title={ver?.verificationReason || 'Evidence did not match'}>
+                                <span className="material-symbols-outlined text-[13px]">cancel</span>
+                                Reason: {ver?.verificationReason || 'Rejected'}
+                              </span>
+                            )
+                          }
+                          if (c.status === 'PENDING_VERIFICATION') {
+                            return (
+                              <span className="text-amber-400 flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[13px] animate-pulse">security</span>
+                                Under AI Review
+                              </span>
+                            )
+                          }
+                          return (
+                            <span className="text-on-surface-variant/60 flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px]">hourglass_empty</span>
+                              Pending Dispatch
+                            </span>
+                          )
+                        })()}
+                      </td>
                       <td className="py-3.5 px-4 font-medium">
                         {c.status === 'RESOLVED' ? (
                           <span className="text-green-400 font-semibold">Resolved Successfully</span>
+                        ) : c.status === 'REJECTED' ? (
+                          <span className="text-error">Closed</span>
                         ) : (
                           <div className="flex flex-col">
                             <span className="text-primary font-semibold">{c.slaRemaining}</span>
@@ -208,6 +280,141 @@ export default function CitizenDashboardPage() {
           )}
         </div>
       </main>
+
+      {/* Detailed Complaint Modal */}
+      {selectedId && (() => {
+        const c = complaints.find(item => item.id === selectedId)
+        if (!c) return null
+        const ver = verifications.find(v => v.complaintId === c.id)
+        const staff = c.assignee ? workers.find(w => w.name.toLowerCase() === c.assignee.toLowerCase()) : null
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 text-sm">
+            <div className="bg-surface-container border border-white/10 rounded-2xl p-5 max-w-md w-full shadow-2xl animate-scale-up text-left flex flex-col gap-4 max-h-[90vh] overflow-y-auto no-scrollbar">
+              
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <div className="flex flex-col">
+                  <span className="text-xs text-primary font-mono tracking-wider font-bold">TICKET #{c.id}</span>
+                  <span className="text-[10px] text-on-surface-variant mt-0.5">Reported: {c.date}</span>
+                </div>
+                <button 
+                  onClick={() => setSelectedId(null)}
+                  className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-surface-container-high text-on-surface-variant transition-colors"
+                >
+                  <span className="material-symbols-outlined text-[18px]">close</span>
+                </button>
+              </div>
+
+              {/* Photo Evidence */}
+              <div className="relative w-full h-44 rounded-xl overflow-hidden border border-white/10 bg-neutral-900">
+                <div
+                  className="absolute inset-0 bg-cover bg-center"
+                  style={{ backgroundImage: `url('${c.photoUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=600&q=80'}')` }}
+                />
+              </div>
+
+              {/* Basic description */}
+              <div className="flex flex-col gap-1 bg-surface-container-lowest p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Citizen Description</span>
+                <p className="text-xs text-on-surface leading-relaxed">{c.description || 'No description provided.'}</p>
+              </div>
+
+              {/* Location */}
+              <div className="flex flex-col gap-1 bg-surface-container-lowest p-3 rounded-xl border border-white/5">
+                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Location Landmark</span>
+                <p className="text-xs text-on-surface leading-relaxed flex items-center gap-1.5">
+                  <span className="material-symbols-outlined text-primary text-[15px]">location_on</span>
+                  {c.location}
+                </p>
+              </div>
+
+              {/* Dynamic Status / Workforce Card */}
+              <div className="flex flex-col gap-3 bg-surface-container-low border border-white/5 p-4 rounded-xl">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Department & Workforce Status</span>
+                  
+                  <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-bold uppercase ${
+                    c.status === 'RESOLVED' 
+                      ? 'bg-green-500/10 text-green-400 border border-green-500/20' 
+                      : c.status === 'ASSIGNED' 
+                        ? 'bg-secondary/10 text-secondary border border-secondary/20' 
+                        : c.status === 'PENDING_VERIFICATION'
+                          ? 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
+                          : c.status === 'REJECTED'
+                            ? 'bg-red-500/10 text-red-400 border border-red-500/20'
+                            : 'bg-primary/10 text-primary border border-primary/20'
+                  }`}>
+                    {c.status}
+                  </span>
+                </div>
+
+                <div className="flex flex-col gap-2 text-xs">
+                  <div className="flex justify-between py-1 border-b border-white/5">
+                    <span className="text-on-surface-variant">Assigned Department</span>
+                    <span className="font-semibold text-on-surface text-right max-w-[200px] truncate">{c.category}</span>
+                  </div>
+
+                  {c.status === 'ASSIGNED' || c.status === 'RESOLVED' ? (
+                    <>
+                      <div className="flex justify-between py-1 border-b border-white/5">
+                        <span className="text-on-surface-variant">Field Staff</span>
+                        <span className="font-semibold text-primary">{c.assignee}</span>
+                      </div>
+                      {staff?.phone && (
+                        <div className="flex justify-between py-1 border-b border-white/5">
+                          <span className="text-on-surface-variant">Contact Staff</span>
+                          <span className="font-semibold text-on-surface flex items-center gap-1 select-all cursor-pointer hover:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-[13px]">call</span>
+                            {staff.phone}
+                          </span>
+                        </div>
+                      )}
+                    </>
+                  ) : null}
+
+                  {c.status === 'REJECTED' && ver?.verificationReason && (
+                    <div className="p-3 bg-error/10 border border-error/20 rounded-lg text-xs flex gap-2">
+                      <span className="material-symbols-outlined text-error shrink-0 text-[16px] mt-0.5">cancel</span>
+                      <div className="text-[11px] leading-relaxed">
+                        <span className="font-semibold text-error block uppercase tracking-wider text-[9px] mb-0.5">Rejection Log</span>
+                        {ver.verificationReason}
+                      </div>
+                    </div>
+                  )}
+
+                  {c.status === 'PENDING_VERIFICATION' && (
+                    <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg text-xs flex gap-2">
+                      <span className="material-symbols-outlined text-yellow-400 shrink-0 text-[16px] mt-0.5">info</span>
+                      <div className="text-[11px] leading-relaxed">
+                        <span className="font-semibold text-yellow-400 block uppercase tracking-wider text-[9px] mb-0.5">Queue Status</span>
+                        Your complaint is currently undergoing automated AI content checks. Once approved, the department will assign a crew member.
+                      </div>
+                    </div>
+                  )}
+
+                  {c.status === 'OPEN' && (
+                    <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg text-xs flex gap-2">
+                      <span className="material-symbols-outlined text-primary shrink-0 text-[16px] mt-0.5 animate-pulse">hourglass_empty</span>
+                      <div className="text-[11px] leading-relaxed">
+                        <span className="font-semibold text-primary block uppercase tracking-wider text-[9px] mb-0.5">Dispatch Queue</span>
+                        Your evidence was successfully validated. Your ticket is open, and a supervisor will assign a field crew member shortly.
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setSelectedId(null)}
+                className="w-full py-2 bg-surface-container-high border border-white/10 text-on-surface font-semibold rounded-lg hover:bg-surface-container-highest transition-colors text-xs mt-2"
+              >
+                Close Details
+              </button>
+
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
