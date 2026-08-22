@@ -209,23 +209,46 @@
 }
 
 /* ── Google Translate Premium Style Overrides ──────────────────────────────── */
+#google_translate_element {
+  display: inline-flex !important;
+  align-items: center !important;
+  background: transparent !important;
+  border: none !important;
+}
+
+#google_translate_element div {
+  background: transparent !important;
+  background-color: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
 .goog-logo-link {
   display: none !important;
 }
+
 .goog-te-gadget {
   font-family: 'Inter', sans-serif !important;
   font-size: 0px !important; /* Hide attribution text */
   color: transparent !important;
-  display: flex !important;
+  display: inline-flex !important;
   align-items: center !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
 }
+
 .goog-te-gadget .goog-te-combo {
-  background: rgba(14, 14, 14, 0.4) !important;
+  background: rgba(15, 23, 42, 0.6) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.8) !important;
-  padding: 4px 10px !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  padding: 4px 12px !important;
   border-radius: 9999px !important;
   font-size: 11px !important;
   font-weight: 600 !important;
@@ -233,32 +256,55 @@
   cursor: pointer !important;
   transition: all 0.2s ease !important;
   margin: 0 !important;
+  appearance: none !important; /* Premium custom select look */
+  -webkit-appearance: none !important;
+  text-align: center !important;
 }
+
 .dark .goog-te-gadget .goog-te-combo {
   background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
   color: #ffffff !important;
 }
+
+.light .goog-te-gadget .goog-te-combo {
+  background: rgba(0, 0, 0, 0.05) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  color: #1f2937 !important;
+}
+
 .goog-te-gadget .goog-te-combo:hover {
   background: rgba(255, 255, 255, 0.1) !important;
   border-color: rgba(255, 255, 255, 0.25) !important;
 }
+
+.light .goog-te-gadget .goog-te-combo:hover {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
 .goog-te-banner-frame.skiptranslate,
 .goog-te-banner-frame,
 .goog-te-banner {
   display: none !important;
 }
+
 body {
   top: 0px !important;
 }
+
 #goog-gt-tt {
   display: none !important;
 }
+
 .goog-tooltip {
   display: none !important;
 }
+
 .goog-tooltip:hover {
   display: none !important;
 }
+
 .goog-text-highlight {
   background-color: transparent !important;
   box-shadow: none !important;

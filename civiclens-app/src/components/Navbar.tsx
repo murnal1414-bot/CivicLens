@@ -59,7 +59,6 @@ export default function Navbar() {
         new (window as any).google.translate.TranslateElement({
           pageLanguage: 'en',
           includedLanguages: 'en,hi,mr,gu,ta,te,kn,ml,pa,ur,bn,or,as', // Major Indian Languages + English
-          layout: (window as any).google.translate.TranslateElement.InlineLayout.SIMPLE,
           autoDisplay: false
         }, 'google_translate_element')
       }
