@@ -40,24 +40,7 @@ const SUBCATS: Record<string, string[]> = {
   garden_regional_park:    ['Broken equipment', 'Overgrown grass', 'Broken fence', 'Park littering']
 }
 
-const AI_HINTS: Record<string, string> = {
-  water_work_drainage:     '→ Water Work & Drainage · Priority: High · Expected fix: within 24 hours',
-  public_work:             '→ Public Work · Priority: Medium–High · Depends on traffic impact',
-  health_sanitation:       '→ Health (Sanitation) · Priority: Medium · Expected fix: within 48 hours',
-  electrical_mechanical:   '→ Electrical & Mechanical · Priority: Medium · Expected fix: within 48 hours',
-  fire:                    '→ Fire Department · Priority: CRITICAL · Immediate action initiated',
-  revenue:                 '→ Revenue Department · Priority: Low · Expected: 5–7 business days',
-  information_technology:  '→ IT Department · Priority: Low · Expected: 3–5 business days',
-  housing_environment:     '→ Housing & Environmental · Priority: Medium · Expected fix: within 72 hours',
-  food_civil_supplies:     '→ Food & Civil Supplies · Priority: Medium · Expected fix: within 72 hours',
-  education:               '→ Education Department · Priority: Low · Expected: 5–7 business days',
-  law_general_admin:       '→ Law & Admin · Priority: Low · Expected: 5–7 business days',
-  planning_rehabilitation: '→ Planning & Rehab · Priority: Medium · Expected: 3–5 business days',
-  accounts:                '→ Accounts Department · Priority: Low · Expected: 5–7 business days',
-  removal:                 '→ Removal Department · Priority: High · Expected: 24–48 hours',
-  zoo:                     '→ Zoo Department · Priority: Medium · Expected: 24–48 hours',
-  garden_regional_park:    '→ Garden & Park · Priority: Low · Expected: within 72 hours',
-}
+
 
 export default function CitizenPage() {
   const navigate = useNavigate()
@@ -291,7 +274,6 @@ export default function CitizenPage() {
   // ──────────────────────────────────────────────────────────────────────────
 
   const [aiRunning, setAiRunning] = useState(false)
-  const [aiExplanation, setAiExplanation] = useState('')
 
   const handleAiAutoFill = async () => {
     if (!text.trim()) {
@@ -352,7 +334,7 @@ export default function CitizenPage() {
           setSubcat(SUBCATS[key][0])
         }
       }
-      setAiExplanation(result.explanation)
+
     } catch (e) {
       console.error(e)
       setError('AI routing failed. Please configure manually.')
@@ -796,20 +778,7 @@ export default function CitizenPage() {
                     </div>
                   </div>
 
-                  {/* AI hint */}
-                  {(aiExplanation || (dept && AI_HINTS[dept])) && (
-                    <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/[0.06] border border-primary/15">
-                      <span className="material-symbols-outlined text-primary text-[18px] mt-0.5 shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
-                      <div>
-                        <p className="text-xs font-semibold text-primary mb-0.5">
-                          {aiExplanation ? 'AI Router Agent Recommendation' : 'AI Routing'}
-                        </p>
-                        <p className="text-xs text-on-surface-variant">
-                          {aiExplanation || AI_HINTS[dept]}
-                        </p>
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               </div>
 
