@@ -2,13 +2,36 @@ import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import type { Department } from '../services/api'
+import { supabase } from '../services/supabase'
 
 export default function GovDepartmentsPage() {
   const [depts, setDepts] = useState<Department[]>([])
   const [searchTerm, setSearchTerm] = useState('')
 
+  const [officerName, setOfficerName] = useState('Municipal Officer')
+  const [officerEmail, setOfficerEmail] = useState('')
+  const [officerAvatar, setOfficerAvatar] = useState('')
+
   useEffect(() => {
     const load = async () => {
+      // Fetch session user profile info
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setOfficerName(session.user.user_metadata?.full_name || session.user.email || 'Municipal Officer')
+        setOfficerEmail(session.user.email || '')
+        setOfficerAvatar(session.user.user_metadata?.avatar_url || '')
+      } else {
+        const localEmail = localStorage.getItem('officer_email')
+        const localUsername = localStorage.getItem('officer_username')
+        if (localEmail) {
+          setOfficerName(localEmail.split('@')[0])
+          setOfficerEmail(localEmail)
+        } else if (localUsername) {
+          setOfficerName(localUsername)
+          setOfficerEmail(localUsername)
+        }
+      }
+
       const complaints = await civiclensApi.getComplaints()
       const rawDepts = civiclensApi.getDepartments()
       
@@ -16,7 +39,9 @@ export default function GovDepartmentsPage() {
         const activeCount = complaints.filter(c => c.category.toLowerCase() === d.name.toLowerCase() && c.status !== 'RESOLVED').length
         return {
           ...d,
-          activeIssues: activeCount
+          activeIssues: activeCount,
+          workersCount: activeCount > 0 ? activeCount * 3 : 0,
+          onTimeRate: activeCount > 0 ? d.onTimeRate : 100
         }
       })
       setDepts(computedDepts)
@@ -33,7 +58,9 @@ export default function GovDepartmentsPage() {
         const current = depts.find(c => c.id === d.id)
         return {
           ...d,
-          activeIssues: current ? current.activeIssues : d.activeIssues
+          activeIssues: current ? current.activeIssues : d.activeIssues,
+          workersCount: current ? current.workersCount : 0,
+          onTimeRate: current ? current.onTimeRate : 100
         }
       })
       setDepts(mapped)
@@ -46,7 +73,7 @@ export default function GovDepartmentsPage() {
 
   const activeIssuesSum = depts.reduce((sum, d) => sum + d.activeIssues, 0)
   const workersSum = depts.reduce((sum, d) => sum + d.workersCount, 0)
-  const avgSla = depts.length > 0 ? Math.round(depts.reduce((sum, d) => sum + d.onTimeRate, 0) / depts.length) : 0
+  const avgSla = depts.length > 0 ? Math.round(depts.reduce((sum, d) => sum + d.onTimeRate, 0) / depts.length) : 100
 
   return (
     <div className="dark flex min-h-screen bg-background text-sm">
@@ -73,11 +100,15 @@ export default function GovDepartmentsPage() {
             </div>
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
               <div className="text-right">
-                <span className="block text-xs font-semibold text-primary">Shivam Gupta</span>
-                <span className="block text-[10px] text-on-surface-variant">Officer-in-charge</span>
+                <span className="block text-xs font-semibold text-primary">{officerName}</span>
+                <span className="block text-[10px] text-on-surface-variant">{officerEmail || 'Officer-in-charge'}</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-white/10">
+                {officerAvatar ? (
+                  <img src={officerAvatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+                )}
               </div>
             </div>
           </div>

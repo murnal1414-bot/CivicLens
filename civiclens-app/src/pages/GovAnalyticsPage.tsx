@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 
+import { supabase } from '../services/supabase'
+
 const depts = [
   { label: 'Solid Waste Mgmt', pct: 98, color: 'bg-primary',   count: '420 active', status: '98% on time', statusColor: 'text-[#4ade80]' },
   { label: 'Sewage & Water',   pct: 82, color: 'bg-secondary', count: '315 active', status: '82% on time', statusColor: 'text-[#facc15]' },
@@ -15,27 +17,57 @@ const workers = [
 ]
 
 export default function GovAnalyticsPage() {
-  const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '0%' })
+  const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '100%' })
   const [departments, setDepartments] = useState<any[]>([])
-  const totalWorkers = departments.reduce((sum, d) => sum + d.workersCount, 0)
+  const totalWorkers = departments.reduce((sum, d) => sum + (d.workersCount || 0), 0)
   const activeIssues = stats.open
 
   const [deptFilter, setDeptFilter] = useState('Health & Sanitation')
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('month')
 
+  const [officerName, setOfficerName] = useState('Municipal Officer')
+  const [officerEmail, setOfficerEmail] = useState('')
+  const [officerAvatar, setOfficerAvatar] = useState('')
+
   useEffect(() => {
     const load = async () => {
-      const data = await civiclensApi.getKpis()
-      setStats(data)
+      // Fetch session user profile info
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setOfficerName(session.user.user_metadata?.full_name || session.user.email || 'Municipal Officer')
+        setOfficerEmail(session.user.email || '')
+        setOfficerAvatar(session.user.user_metadata?.avatar_url || '')
+      } else {
+        const localEmail = localStorage.getItem('officer_email')
+        const localUsername = localStorage.getItem('officer_username')
+        if (localEmail) {
+          setOfficerName(localEmail.split('@')[0])
+          setOfficerEmail(localEmail)
+        } else if (localUsername) {
+          setOfficerName(localUsername)
+          setOfficerEmail(localUsername)
+        }
+      }
 
       const complaints = await civiclensApi.getComplaints()
+      const total = complaints.length
+      const open = complaints.filter(c => c.status !== 'RESOLVED').length
+      const resolved = complaints.filter(c => c.status === 'RESOLVED').length
+      const rate = total > 0 ? Math.round((resolved / total) * 100) : 100
+      setStats({
+        total,
+        open,
+        resolved,
+        slaComplianceRate: rate + '%'
+      })
+
       const rawDepts = civiclensApi.getDepartments()
-      
       const computedDepts = rawDepts.map(d => {
         const activeCount = complaints.filter(c => c.category.toLowerCase() === d.name.toLowerCase() && c.status !== 'RESOLVED').length
         return {
           ...d,
-          activeIssues: activeCount
+          activeIssues: activeCount,
+          workersCount: activeCount > 0 ? activeCount * 3 : 0
         }
       })
       setDepartments(computedDepts)
@@ -62,11 +94,15 @@ export default function GovAnalyticsPage() {
             </div>
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
               <div className="text-right">
-                <span className="block text-xs font-semibold text-primary">Shivam Gupta</span>
-                <span className="block text-[10px] text-on-surface-variant">Officer-in-charge</span>
+                <span className="block text-xs font-semibold text-primary">{officerName}</span>
+                <span className="block text-[10px] text-on-surface-variant">{officerEmail || 'Officer-in-charge'}</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-white/10">
+                {officerAvatar ? (
+                  <img src={officerAvatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+                )}
               </div>
             </div>
           </div>

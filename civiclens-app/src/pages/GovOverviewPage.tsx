@@ -2,33 +2,138 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
-
-const activity = [
-  { icon: 'check_circle',    color: 'primary', title: 'Extended deadline', time: '10m ago', desc: 'Approved extra time for Complaint #4928-A due to bad weather in Zone 2.' },
-  { icon: 'assignment_ind',  color: 'secondary', title: 'Team Dispatched', time: '45m ago', desc: 'Sent a repair crew to Sector 9 for urgent electrical work.' },
-  { icon: 'comment',         color: 'surface-variant', title: 'Added a note', time: '2h ago', desc: 'Met with sanitation head to discuss the cleaning schedule for next month.' },
-]
+import { supabase } from '../services/supabase'
 
 export default function GovOverviewPage() {
-  const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '0%' })
+  const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '100%' })
   const [departments, setDepartments] = useState<any[]>([])
+  const [recentActions, setRecentActions] = useState<any[]>([])
+  const [alertInfo, setAlertInfo] = useState<any>({
+    title: 'All Systems Operating Normally',
+    desc: 'No active municipal issues reported. Citizen satisfaction rating remains high at 100%.',
+    type: 'check_circle',
+    color: 'primary',
+    isUrgent: false
+  })
+
+  const [officerName, setOfficerName] = useState('Municipal Officer')
+  const [officerEmail, setOfficerEmail] = useState('')
+  const [officerAvatar, setOfficerAvatar] = useState('')
 
   useEffect(() => {
     const load = async () => {
-      const data = await civiclensApi.getKpis()
-      setStats(data)
+      // Fetch session user profile info
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setOfficerName(session.user.user_metadata?.full_name || session.user.email || 'Municipal Officer')
+        setOfficerEmail(session.user.email || '')
+        setOfficerAvatar(session.user.user_metadata?.avatar_url || '')
+      } else {
+        const localEmail = localStorage.getItem('officer_email')
+        const localUsername = localStorage.getItem('officer_username')
+        if (localEmail) {
+          setOfficerName(localEmail.split('@')[0])
+          setOfficerEmail(localEmail)
+        } else if (localUsername) {
+          setOfficerName(localUsername)
+          setOfficerEmail(localUsername)
+        }
+      }
 
+      // Single query fetch for speed & consistency
       const complaints = await civiclensApi.getComplaints()
+      const total = complaints.length
+      const open = complaints.filter(c => c.status !== 'RESOLVED').length
+      const resolved = complaints.filter(c => c.status === 'RESOLVED').length
+      const rate = total > 0 ? Math.round((resolved / total) * 100) : 100
+      setStats({
+        total,
+        open,
+        resolved,
+        slaComplianceRate: rate + '%'
+      })
+
       const rawDepts = civiclensApi.getDepartments()
-      
       const computedDepts = rawDepts.map(d => {
         const activeCount = complaints.filter(c => c.category.toLowerCase() === d.name.toLowerCase() && c.status !== 'RESOLVED').length
         return {
           ...d,
-          activeIssues: activeCount
+          activeIssues: activeCount,
+          workersCount: activeCount > 0 ? activeCount * 3 : 0
         }
       })
       setDepartments(computedDepts.slice(0, 5))
+
+      // Generate dynamic activity feed
+      const computedActivity = complaints.slice(0, 3).map(c => {
+        if (c.status === 'RESOLVED') {
+          return {
+            icon: 'check_circle',
+            color: 'primary',
+            title: 'Complaint Resolved',
+            time: c.date,
+            desc: `Complaint #${c.id} for ${c.category} in ${c.location} was resolved.`
+          }
+        } else if (c.assignee) {
+          return {
+            icon: 'assignment_ind',
+            color: 'secondary',
+            title: 'Officer Assigned',
+            time: c.date,
+            desc: `Assigned ${c.assignee} to look into ${c.category} issue #${c.id}.`
+          }
+        } else {
+          return {
+            icon: 'campaign',
+            color: 'secondary',
+            title: 'New Complaint Filed',
+            time: c.date,
+            desc: `A new ${c.category} complaint #${c.id} was filed in ${c.location}.`
+          }
+        }
+      })
+      
+      if (computedActivity.length === 0) {
+        setRecentActions([
+          {
+            icon: 'info',
+            color: 'primary',
+            title: 'System Initialized',
+            time: 'Just now',
+            desc: 'CivicLens system is online. Awaiting citizen complaints.'
+          }
+        ])
+      } else {
+        setRecentActions(computedActivity)
+      }
+
+      // Generate dynamic alert
+      const activeOverdue = complaints.find(c => (c.priority === 'CRITICAL' || c.priority === 'HIGH') && c.status !== 'RESOLVED')
+      if (activeOverdue) {
+        setAlertInfo({
+          title: `Critical Issue in ${activeOverdue.location.split(',')[0] || activeOverdue.location}`,
+          desc: `${activeOverdue.category} issue reported: "${activeOverdue.description}". Recommended response SLA limit is ${activeOverdue.slaTotal}. AI recommends immediate crew dispatch.`,
+          type: 'warning',
+          color: 'error',
+          isUrgent: true
+        })
+      } else if (open > 0) {
+        setAlertInfo({
+          title: 'Open Issues Awaiting Assignment',
+          desc: `There are currently ${open} unassigned issues in the queue. Please assign crews to maintain high SLA compliance.`,
+          type: 'info',
+          color: 'secondary',
+          isUrgent: false
+        })
+      } else {
+        setAlertInfo({
+          title: 'All Systems Operating Normally',
+          desc: 'No active municipal issues reported. Citizen satisfaction rating remains high at 100%.',
+          type: 'check_circle',
+          color: 'primary',
+          isUrgent: false
+        })
+      }
     }
     load()
   }, [])
@@ -36,14 +141,14 @@ export default function GovOverviewPage() {
   const kpis = [
     { icon: 'forum',           label: 'Total Complaints',   value: stats.total.toString(), trend: '+12%', trendUp: true,  accent: 'primary',   bar: 70 },
     { icon: 'pending_actions', label: 'Still Open',         value: stats.open.toString(),  trend: '+4%',  trendUp: false, accent: 'secondary', bar: Math.round((stats.open / Math.max(1, stats.total)) * 100) },
-    { icon: 'verified',        label: 'Fixed On Time',      value: stats.slaComplianceRate,  trend: '+2.5%',trendUp: true,  accent: 'primary',   bar: parseInt(stats.slaComplianceRate) || 92 },
+    { icon: 'verified',        label: 'Fixed On Time',      value: stats.slaComplianceRate,  trend: '+2.5%',trendUp: true,  accent: 'primary',   bar: parseInt(stats.slaComplianceRate) || 100 },
   ]
 
   const maxIssues = Math.max(1, ...departments.map(d => d.activeIssues))
   const depts = departments.map(d => ({
     label: d.name.split(' ')[0] || d.name,
     pct: Math.round((d.activeIssues / maxIssues) * 100),
-    color: d.activeIssues > 40 ? 'bg-primary' : 'bg-secondary',
+    color: d.activeIssues > 0 ? 'bg-primary' : 'bg-secondary',
     pts: d.activeIssues.toString()
   }))
   return (
@@ -66,11 +171,15 @@ export default function GovOverviewPage() {
             </div>
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
               <div className="text-right">
-                <span className="block text-xs font-semibold text-primary">Shivam Gupta</span>
-                <span className="block text-[10px] text-on-surface-variant">Officer-in-charge</span>
+                <span className="block text-xs font-semibold text-primary">{officerName}</span>
+                <span className="block text-[10px] text-on-surface-variant">{officerEmail || 'Officer-in-charge'}</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-white/10">
+                {officerAvatar ? (
+                  <img src={officerAvatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+                )}
               </div>
             </div>
           </div>
@@ -80,25 +189,27 @@ export default function GovOverviewPage() {
         <main className="pt-20 px-6 pb-10 flex flex-col gap-5 w-full max-w-[1200px] mx-auto">
           
           {/* AI Alert Banner */}
-          <div className="w-full bg-error-container/10 backdrop-blur-md rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-error/15 relative overflow-hidden">
+          <div className={`w-full bg-${alertInfo.color}-container/10 backdrop-blur-md rounded-xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-${alertInfo.color}/15 relative overflow-hidden`}>
             <div className="flex items-start gap-3 relative z-10">
-              <div className="w-9 h-9 rounded-full bg-error-container/20 flex items-center justify-center shrink-0 border border-error/20">
-                <span className="material-symbols-outlined text-error text-[18px]">warning</span>
+              <div className={`w-9 h-9 rounded-full bg-${alertInfo.color}-container/20 flex items-center justify-center shrink-0 border border-${alertInfo.color}/20`}>
+                <span className={`material-symbols-outlined text-${alertInfo.color} text-[18px]`}>{alertInfo.type}</span>
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-0.5">
-                  <span className="text-[10px] text-error font-semibold uppercase tracking-widest">AI Officer Alert</span>
-                  <span className="px-2 py-0.5 rounded-full bg-error/10 text-error text-[9px] font-medium uppercase">Urgent</span>
+                  <span className={`text-[10px] text-${alertInfo.color} font-semibold uppercase tracking-widest`}>AI Officer Alert</span>
+                  {alertInfo.isUrgent && (
+                    <span className="px-2 py-0.5 rounded-full bg-error/10 text-error text-[9px] font-medium uppercase animate-pulse">Urgent</span>
+                  )}
                 </div>
-                <h2 className="text-sm font-semibold text-on-surface">Overdue Issues in Zone 4</h2>
+                <h2 className="text-sm font-semibold text-on-surface">{alertInfo.title}</h2>
                 <p className="text-xs text-on-surface-variant mt-0.5 max-w-2xl leading-relaxed">
-                  Sanitation issues in Zone 4 are taking longer than the 48-hour limit. AI warns that local complaints might rise if this is not resolved in 6 hours.
+                  {alertInfo.desc}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2 relative z-10 shrink-0 self-end sm:self-center">
-              <button className="px-4 py-1.5 rounded-lg border border-error/30 text-error text-xs font-semibold hover:bg-error/5 transition-colors">Dismiss</button>
-              <button className="px-4 py-1.5 rounded-lg bg-error text-on-error text-xs font-semibold hover:bg-error/90 transition-colors shadow">Take Action</button>
+              <button className={`px-4 py-1.5 rounded-lg border border-${alertInfo.color}/30 text-${alertInfo.color} text-xs font-semibold hover:bg-${alertInfo.color}/5 transition-colors`}>Dismiss</button>
+              <button className={`px-4 py-1.5 rounded-lg bg-${alertInfo.color} text-white text-xs font-semibold hover:opacity-90 transition-colors shadow`}>Take Action</button>
             </div>
           </div>
 
@@ -195,7 +306,7 @@ export default function GovOverviewPage() {
               <Link to="/gov/complaints" className="text-xs text-primary hover:underline font-medium">View all reports</Link>
             </div>
             <div className="flex flex-col divide-y divide-white/5">
-              {activity.map(({ icon, color, title, time, desc }) => (
+              {recentActions.map(({ icon, color, title, time, desc }) => (
                 <div key={title} className="flex items-start gap-3.5 p-4 hover:bg-surface-container-high/20 transition-colors cursor-pointer">
                   <div className={`w-8 h-8 rounded-full bg-${color}/10 border border-${color}/20 flex items-center justify-center shrink-0`}>
                     <span className={`material-symbols-outlined text-${color} text-[16px]`}>{icon}</span>

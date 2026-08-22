@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import type { Complaint } from '../services/api'
-import { runAnalystAgent, runReasoningAgent } from '../services/ai'
+import { runAnalystAgent, runReasoningAgent, runVisionCheckAgent } from '../services/ai'
+import { supabase } from '../services/supabase'
 
 const priorityConfig = {
   CRITICAL: { label: 'CRITICAL', icon: 'warning', cls: 'badge-critical' },
@@ -31,9 +32,32 @@ export default function GovComplaintsPage() {
   const [aiLoading, setAiLoading] = useState(false)
   const [analystData, setAnalystData] = useState<{ impact: string; complexity: 'Low' | 'Medium' | 'High'; complexityReason: string; steps: string[] } | null>(null)
   const [reasoningData, setReasoningData] = useState<{ safetyHazards: string; suggestedSla: string; reasoning: string } | null>(null)
+  const [visionData, setVisionData] = useState<{ isMatch: boolean; matchPercentage: number; explanation: string } | null>(null)
+
+  const [officerName, setOfficerName] = useState('Municipal Officer')
+  const [officerEmail, setOfficerEmail] = useState('')
+  const [officerAvatar, setOfficerAvatar] = useState('')
 
   useEffect(() => {
     const load = async () => {
+      // Fetch session user profile info
+      const { data: { session } } = await supabase.auth.getSession()
+      if (session?.user) {
+        setOfficerName(session.user.user_metadata?.full_name || session.user.email || 'Municipal Officer')
+        setOfficerEmail(session.user.email || '')
+        setOfficerAvatar(session.user.user_metadata?.avatar_url || '')
+      } else {
+        const localEmail = localStorage.getItem('officer_email')
+        const localUsername = localStorage.getItem('officer_username')
+        if (localEmail) {
+          setOfficerName(localEmail.split('@')[0])
+          setOfficerEmail(localEmail)
+        } else if (localUsername) {
+          setOfficerName(localUsername)
+          setOfficerEmail(localUsername)
+        }
+      }
+
       const data = await civiclensApi.getComplaints()
       setComplaints(data)
       if (data.length > 0 && !selectedId) {
@@ -47,25 +71,49 @@ export default function GovComplaintsPage() {
     if (!selectedId) {
       setAnalystData(null)
       setReasoningData(null)
+      setVisionData(null)
       return
     }
     
     const runAgents = async () => {
       const complaint = complaints.find(c => c.id === selectedId)
       if (!complaint) return
+
+      // AI Cache check to speed up time complexity (Instant navigation)
+      const cacheKey = `civiclens_ai_cache_${selectedId}`
+      const cached = localStorage.getItem(cacheKey)
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached)
+          setAnalystData(parsed.analyst)
+          setReasoningData(parsed.reasoning)
+          setVisionData(parsed.vision)
+          setAiLoading(false)
+          return
+        } catch (e) {
+          console.error("Failed to parse cached AI details", e)
+        }
+      }
       
       setAiLoading(true)
       try {
-        const [analystRes, reasoningRes] = await Promise.all([
+        const [analystRes, reasoningRes, visionRes] = await Promise.all([
           runAnalystAgent(complaint),
-          runReasoningAgent(complaint)
+          runReasoningAgent(complaint),
+          runVisionCheckAgent(complaint.photoUrl || '', complaint.description)
         ])
         setAnalystData(analystRes)
         setReasoningData(reasoningRes)
+        setVisionData(visionRes)
+
+        // Save results to Cache
+        const cacheData = { analyst: analystRes, reasoning: reasoningRes, vision: visionRes }
+        localStorage.setItem(cacheKey, JSON.stringify(cacheData))
       } catch (e) {
         console.error("AI Agents failed to run", e)
         setAnalystData(null)
         setReasoningData(null)
+        setVisionData(null)
       } finally {
         setAiLoading(false)
       }
@@ -138,11 +186,15 @@ export default function GovComplaintsPage() {
             </div>
             <div className="flex items-center gap-3 pl-4 border-l border-white/10">
               <div className="text-right">
-                <span className="block text-xs font-semibold text-primary">Shivam Gupta</span>
-                <span className="block text-[10px] text-on-surface-variant">Officer-in-charge</span>
+                <span className="block text-xs font-semibold text-primary">{officerName}</span>
+                <span className="block text-[10px] text-on-surface-variant">{officerEmail || 'Officer-in-charge'}</span>
               </div>
-              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+              <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center overflow-hidden border border-white/10">
+                {officerAvatar ? (
+                  <img src={officerAvatar} className="w-full h-full object-cover" alt="" />
+                ) : (
+                  <span className="material-symbols-outlined text-on-primary text-[16px]">person</span>
+                )}
               </div>
             </div>
           </div>
@@ -324,8 +376,18 @@ export default function GovComplaintsPage() {
                         <div className="flex flex-col gap-2">
                           <div className="flex items-center justify-between text-xs">
                             <span className="text-on-surface-variant font-medium">Photo Check</span>
-                            <span className="text-primary font-semibold">98% Match</span>
+                            <span className={`font-semibold ${visionData?.isMatch === false ? 'text-error' : 'text-primary'}`}>
+                              {visionData ? `${visionData.matchPercentage}% Match` : 'Checking...'}
+                            </span>
                           </div>
+
+                          {visionData && !visionData.isMatch && (
+                            <div className="p-2.5 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-2">
+                              <span className="material-symbols-outlined text-[16px] text-error">flag</span>
+                              <span className="text-error text-[10px] font-semibold uppercase tracking-wider">Image not similar to complaint filed</span>
+                            </div>
+                          )}
+
                           <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10">
                             <div
                               className="absolute inset-0 bg-cover bg-center bg-neutral-900"
@@ -337,6 +399,9 @@ export default function GovComplaintsPage() {
                               <span className="text-xs font-semibold text-primary block leading-tight truncate">{selected.description || 'No description provided.'}</span>
                             </div>
                           </div>
+                          {visionData?.explanation && (
+                            <p className="text-[10px] text-on-surface-variant italic mt-1 leading-normal">{visionData.explanation}</p>
+                          )}
                         </div>
 
                         {/* Safety Warning from Reasoning Agent */}
