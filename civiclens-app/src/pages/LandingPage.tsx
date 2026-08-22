@@ -49,7 +49,7 @@ function AnimatedHeading({ text }: { text: string }) {
 
   return (
     <div 
-      className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-normal text-white mb-4 leading-[1.05]"
+      className="text-3xl sm:text-4xl md:text-5xl lg:text-[46px] xl:text-[54px] font-normal text-white mb-4 leading-[1.08]"
       style={{ letterSpacing: '-0.04em' }}
     >
       {lines.map((line, lineIndex) => {
@@ -144,7 +144,7 @@ export default function LandingPage() {
       <Navbar />
 
       {/* ═══════════════════════════════════════════════════ HERO */}
-      <section className="relative w-full min-h-screen flex flex-col overflow-hidden">
+      <section className="relative w-full min-h-screen flex flex-col overflow-hidden animate-fade-in">
         
         {/* Video Background (RAW, no overlay/dimming) */}
         <video
@@ -159,13 +159,13 @@ export default function LandingPage() {
         {/* Content pushed to bottom */}
         <div className="relative z-10 flex-1 flex flex-col justify-end px-6 md:px-12 lg:px-16 pb-12 lg:pb-16 pt-28">
           <div className="max-w-[1200px] mx-auto w-full">
-            <div className="lg:grid lg:grid-cols-2 lg:items-end gap-10">
+            <div className="lg:grid lg:grid-cols-12 lg:items-end gap-10">
 
               {/* Left Column: Heading + Tagline + Actions */}
-              <div className="flex flex-col gap-6 text-left">
+              <div className="lg:col-span-8 flex flex-col gap-6 text-left">
                 <AnimatedHeading text={"Shaping tomorrow\nwith vision and action."} />
 
-                <FadeIn delay={800} className="text-base md:text-lg text-gray-300">
+                <FadeIn delay={800} className="text-base md:text-lg text-gray-300 max-w-xl">
                   We resolve citizen grievances and build digital services that shape Indore's future.
                 </FadeIn>
 
@@ -186,7 +186,7 @@ export default function LandingPage() {
               </div>
 
               {/* Right Column: Glass Card */}
-              <FadeIn delay={1400} className="flex items-end justify-start lg:justify-end mt-8 lg:mt-0">
+              <FadeIn delay={1400} className="lg:col-span-4 flex items-end justify-start lg:justify-end mt-8 lg:mt-0">
                 <div className="liquid-glass border border-white/20 px-6 py-3 rounded-xl w-full max-w-xs">
                   <p className="text-lg md:text-xl lg:text-2xl font-light text-white leading-normal">
                     Reporting.<br />Resolving.<br />Tracking.
