@@ -1,5 +1,6 @@
-import { Link, useLocation } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
+import { supabase } from '../services/supabase'
 
 const navItems = [
   { path: '/gov/overview',   label: 'Overview',    icon: 'dashboard' },
@@ -10,6 +11,14 @@ const navItems = [
 
 export default function GovSidebar() {
   const { pathname } = useLocation()
+  const navigate = useNavigate()
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    localStorage.removeItem('officer_email')
+    localStorage.removeItem('officer_username')
+    navigate('/')
+  }
 
   return (
     <aside className="fixed left-0 top-0 h-full w-60 bg-white dark:bg-surface-container-lowest border-r border-black/[0.06] dark:border-white/[0.08] backdrop-blur-2xl z-50 flex flex-col py-4 transition-colors duration-200">
@@ -44,7 +53,7 @@ export default function GovSidebar() {
       </nav>
 
       {/* SLA Status / Performance widget */}
-      <div className="px-4 mt-auto">
+      <div className="px-4 mt-auto flex flex-col gap-3">
         <div className="p-3.5 rounded-xl bg-gray-50 dark:bg-surface-container-low border border-black/[0.04] dark:border-white/[0.06] backdrop-blur-xl">
           <div className="flex items-center justify-between mb-1.5">
             <span className="text-[9px] text-gray-500 dark:text-on-surface-variant uppercase tracking-wider font-semibold">On-Time Fixes</span>
@@ -55,6 +64,15 @@ export default function GovSidebar() {
           </div>
           <span className="text-[9px] text-gray-400 dark:text-on-surface-variant/40 block mt-1.5">Target: 90% or higher</span>
         </div>
+        
+        {/* Sign Out Button */}
+        <button
+          onClick={handleSignOut}
+          className="w-full py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 border border-red-500/20 bg-red-500/5 text-error text-xs font-semibold hover:bg-red-500/10 hover:border-red-500/35 transition-all"
+        >
+          <span className="material-symbols-outlined text-[16px]">logout</span>
+          Sign Out
+        </button>
       </div>
     </aside>
   )

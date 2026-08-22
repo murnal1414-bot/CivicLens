@@ -107,22 +107,25 @@ export default function LoginPage() {
         return
       }
       setMessage('')
-      // Mock login: Redirect to citizen page
+      // Mock login: Store phone in localStorage and redirect to citizen page
+      localStorage.setItem('citizen_phone', phone.trim())
       navigate('/file-complaint')
     } else {
       if (!username.trim() || !password.trim()) {
-        setMessage('Please enter username and password.')
+        setMessage('Please enter email and password.')
         return
       }
-      // If user inputs an email as username, verify against government whitelist
-      if (username.includes('@')) {
-        if (!GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(username.toLowerCase())) {
-          setMessage(`Access Denied: ${username} is not authorized for officer portals.`)
-          return
-        }
+      if (!username.includes('@')) {
+        setMessage('Please enter a valid officer email.')
+        return
+      }
+      if (!GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(username.trim().toLowerCase())) {
+        setMessage(`Access Denied: ${username} is not authorized for officer portals.`)
+        return
       }
       setMessage('')
-      // Mock login: Redirect to officer overview
+      // Mock login: Store officer email in localStorage and redirect to officer overview
+      localStorage.setItem('officer_email', username.trim().toLowerCase())
       navigate('/gov/overview')
     }
   }

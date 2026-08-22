@@ -1,7 +1,9 @@
-import { useState, useCallback } from 'react'
-import { Link } from 'react-router-dom'
+import { useState, useCallback, useEffect } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { civiclensApi } from '../services/api'
+import { supabase } from '../services/supabase'
+import { runRouterAgent } from '../services/ai'
 
 const SUBCATS: Record<string, string[]> = {
   water:      ['Water leaking from pipe', 'No water supply', 'Low water pressure', 'Dirty water'],
@@ -28,6 +30,8 @@ const AI_HINTS: Record<string, string> = {
 }
 
 export default function CitizenPage() {
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState(true)
   const [lang, setLang]           = useState<'en' | 'hi'>('en')
   const [dept, setDept]           = useState('')
   const [subcat, setSubcat]       = useState('')
@@ -40,6 +44,60 @@ export default function CitizenPage() {
   const [gpsLoading, setGpsLoad]  = useState(false)
   const [gpsOk, setGpsOk]         = useState(false)
   const [error, setError]         = useState('')
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const phone = localStorage.getItem('citizen_phone')
+      if (!session && !phone) {
+        navigate('/login?role=citizen')
+      } else {
+        setLoading(false)
+      }
+    }
+    checkAuth()
+  }, [navigate])
+
+  const [aiRunning, setAiRunning] = useState(false)
+  const [aiExplanation, setAiExplanation] = useState('')
+
+  const handleAiAutoFill = async () => {
+    if (!text.trim()) {
+      setError('Please write a description first so the AI Agent can analyze it.')
+      return
+    }
+    setAiRunning(true)
+    setError('')
+    try {
+      const result = await runRouterAgent(text)
+      const categoryToKey: Record<string, string> = {
+        'Water Supply': 'water',
+        'Drainage & Sewerage': 'drainage',
+        'Health & Sanitation': 'sanitation',
+        'Electrical & Mechanical': 'electrical',
+        'Streetlights': 'electrical',
+        'Roads & Public Works': 'roads',
+        'Parks & Gardens': 'parks',
+        'Fire Safety': 'fire',
+        'Revenue': 'revenue',
+        'Housing & Environment': 'housing'
+      }
+      
+      const key = categoryToKey[result.category] || ''
+      if (key) {
+        setDept(key)
+        if (SUBCATS[key]?.[0]) {
+          setSubcat(SUBCATS[key][0])
+        }
+      }
+      setAiExplanation(result.explanation)
+    } catch (e) {
+      console.error(e)
+      setError('AI routing failed. Please configure manually.')
+    } finally {
+      setAiRunning(false)
+    }
+  }
 
   const addPreviews = useCallback((files: FileList | null) => {
     if (!files) return
@@ -118,6 +176,15 @@ export default function CitizenPage() {
     ? 'Fill in the details below and we\'ll make sure your complaint reaches the right team.'
     : 'नीचे जानकारी भरें और हम सुनिश्चित करेंगे कि आपकी शिकायत सही टीम तक पहुंचे।'
 
+  if (loading) {
+    return (
+      <div className="dark min-h-screen bg-background flex flex-col items-center justify-center gap-4">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        <p className="text-xs text-on-surface-variant uppercase tracking-widest">Checking Authentication...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="dark min-h-screen bg-background">
       <Navbar />
@@ -179,17 +246,33 @@ export default function CitizenPage() {
                       placeholder="Describe the issue clearly. E.g. 'The streetlight near Palasia Square has not been working for 3 days.'"
                     />
                     {error && <p className="text-xs text-error mt-1">{error}</p>}
-                    {/* Mic */}
-                    <button
-                      onClick={() => setMic(m => !m)}
-                      title={micActive ? 'Stop recording' : 'Record voice message'}
-                      className={`absolute bottom-3 right-3 w-9 h-9 rounded-full flex items-center justify-center border transition-all ${micActive ? 'bg-error/20 border-error/40' : 'bg-surface-container hover:bg-surface-bright border-white/10'}`}
-                    >
-                      {micActive && <span className="absolute inset-0 rounded-full border border-error/30 animate-ping" />}
-                      <span className={`material-symbols-outlined text-[16px] ${micActive ? 'text-error' : 'text-on-surface-variant'}`}>
-                        {micActive ? 'stop' : 'mic'}
-                      </span>
-                    </button>
+                    
+                    {/* Actions Panel */}
+                    <div className="absolute bottom-3 right-3 flex items-center gap-2">
+                      <button
+                        onClick={handleAiAutoFill}
+                        disabled={aiRunning}
+                        type="button"
+                        title="AI Auto-Fill Department & Priority"
+                        className="h-9 px-3 bg-primary/10 border border-primary/20 text-primary hover:bg-primary/20 text-xs rounded-full flex items-center gap-1.5 transition-all"
+                      >
+                        <span className={`material-symbols-outlined text-[15px] ${aiRunning ? 'animate-spin' : ''}`}>
+                          {aiRunning ? 'refresh' : 'psychology'}
+                        </span>
+                        {aiRunning ? 'Analyzing...' : 'AI Route'}
+                      </button>
+                      
+                      <button
+                        onClick={() => setMic(m => !m)}
+                        title={micActive ? 'Stop recording' : 'Record voice message'}
+                        className={`w-9 h-9 rounded-full flex items-center justify-center border transition-all ${micActive ? 'bg-error/20 border-error/40' : 'bg-surface-container hover:bg-surface-bright border-white/10'}`}
+                      >
+                        {micActive && <span className="absolute inset-0 rounded-full border border-error/30 animate-ping" />}
+                        <span className={`material-symbols-outlined text-[16px] ${micActive ? 'text-error' : 'text-on-surface-variant'}`}>
+                          {micActive ? 'stop' : 'mic'}
+                        </span>
+                      </button>
+                    </div>
                   </div>
 
                   {/* Department + Sub-cat */}
@@ -228,12 +311,16 @@ export default function CitizenPage() {
                   </div>
 
                   {/* AI hint */}
-                  {dept && AI_HINTS[dept] && (
+                  {(aiExplanation || (dept && AI_HINTS[dept])) && (
                     <div className="flex items-start gap-3 p-3 rounded-xl bg-primary/[0.06] border border-primary/15">
                       <span className="material-symbols-outlined text-primary text-[18px] mt-0.5 shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>psychology</span>
                       <div>
-                        <p className="text-xs font-semibold text-primary mb-0.5">AI routing</p>
-                        <p className="text-xs text-on-surface-variant">{AI_HINTS[dept]}</p>
+                        <p className="text-xs font-semibold text-primary mb-0.5">
+                          {aiExplanation ? 'AI Router Agent Recommendation' : 'AI Routing'}
+                        </p>
+                        <p className="text-xs text-on-surface-variant">
+                          {aiExplanation || AI_HINTS[dept]}
+                        </p>
                       </div>
                     </div>
                   )}

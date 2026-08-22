@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
 import { Button } from "./ui/button"
@@ -12,6 +13,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./ui/popover"
+import { supabase } from '../services/supabase'
 
 // Navigation links array
 const navigationLinks = [
@@ -22,6 +24,38 @@ const navigationLinks = [
 
 export default function Navbar() {
   const { pathname } = useLocation()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession()
+      const phone = localStorage.getItem('citizen_phone')
+      const officerEmail = localStorage.getItem('officer_email')
+      const officerUsername = localStorage.getItem('officer_username')
+      setIsLoggedIn(!!session || !!phone || !!officerEmail || !!officerUsername)
+    }
+    checkAuth()
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const phone = localStorage.getItem('citizen_phone')
+      const officerEmail = localStorage.getItem('officer_email')
+      const officerUsername = localStorage.getItem('officer_username')
+      setIsLoggedIn(!!session || !!phone || !!officerEmail || !!officerUsername)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    localStorage.removeItem('citizen_phone')
+    localStorage.removeItem('officer_email')
+    localStorage.removeItem('officer_username')
+    setIsLoggedIn(false)
+    window.location.href = '/'
+  }
 
   return (
     <header className="fixed top-3 left-0 right-0 z-50 px-4 md:px-10">
@@ -111,12 +145,20 @@ export default function Navbar() {
         <div className="flex items-center gap-2 shrink-0">
           <ThemeToggle />
           
-          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-[11px] rounded-full text-gray-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
-            <Link to="/login?role=citizen">Citizen Login</Link>
-          </Button>
-          <Button asChild size="sm" className="text-[11px] font-semibold bg-gray-900 text-white hover:opacity-90 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-full shadow-md">
-            <Link to="/login?role=officer">Officer Login</Link>
-          </Button>
+          {isLoggedIn ? (
+            <Button onClick={handleSignOut} size="sm" className="text-[11px] font-semibold bg-gray-900 text-white hover:opacity-90 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-full shadow-md">
+              Sign Out
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-[11px] rounded-full text-gray-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
+                <Link to="/login?role=citizen">Citizen Login</Link>
+              </Button>
+              <Button asChild size="sm" className="text-[11px] font-semibold bg-gray-900 text-white hover:opacity-90 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-full shadow-md">
+                <Link to="/login?role=officer">Officer Login</Link>
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </header>

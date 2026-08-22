@@ -8,6 +8,7 @@ import GovComplaintsPage from './pages/GovComplaintsPage'
 import GovAnalyticsPage from './pages/GovAnalyticsPage'
 import GovDepartmentsPage from './pages/GovDepartmentsPage'
 import LoginPage from './pages/LoginPage'
+import ProtectedRoute from './components/ProtectedRoute'
 import './index.css'
 
 export default function App() {
@@ -40,10 +41,14 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/file-complaint" element={<CitizenPage />} />
         <Route path="/login" element={<LoginPage />} />
-        <Route path="/gov/overview" element={<GovOverviewPage />} />
-        <Route path="/gov/complaints" element={<GovComplaintsPage />} />
-        <Route path="/gov/analytics" element={<GovAnalyticsPage />} />
-        <Route path="/gov/departments" element={<GovDepartmentsPage />} />
+        
+        {/* Protected Officer Routes */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/gov/overview" element={<GovOverviewPage />} />
+          <Route path="/gov/complaints" element={<GovComplaintsPage />} />
+          <Route path="/gov/analytics" element={<GovAnalyticsPage />} />
+          <Route path="/gov/departments" element={<GovDepartmentsPage />} />
+        </Route>
       </Routes>
     </BrowserRouter>
   )

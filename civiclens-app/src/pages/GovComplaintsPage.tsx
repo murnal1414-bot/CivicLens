@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import type { Complaint } from '../services/api'
+import { runAnalystAgent, runReasoningAgent } from '../services/ai'
 
 const priorityConfig = {
   CRITICAL: { label: 'CRITICAL', icon: 'warning', cls: 'badge-critical' },
@@ -27,6 +28,40 @@ export default function GovComplaintsPage() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDept, setSelectedDept] = useState('All Departments')
   const [sortBy, setSortBy] = useState('Sort by Priority')
+  const [aiLoading, setAiLoading] = useState(false)
+  const [analystData, setAnalystData] = useState<{ impact: string; complexity: 'Low' | 'Medium' | 'High'; complexityReason: string; steps: string[] } | null>(null)
+  const [reasoningData, setReasoningData] = useState<{ safetyHazards: string; suggestedSla: string; reasoning: string } | null>(null)
+
+  useEffect(() => {
+    if (!selectedId) {
+      setAnalystData(null)
+      setReasoningData(null)
+      return
+    }
+    
+    const runAgents = async () => {
+      const complaint = complaints.find(c => c.id === selectedId)
+      if (!complaint) return
+      
+      setAiLoading(true)
+      try {
+        const [analystRes, reasoningRes] = await Promise.all([
+          runAnalystAgent(complaint),
+          runReasoningAgent(complaint)
+        ])
+        setAnalystData(analystRes)
+        setReasoningData(reasoningRes)
+      } catch (e) {
+        console.error("AI Agents failed to run", e)
+        setAnalystData(null)
+        setReasoningData(null)
+      } finally {
+        setAiLoading(false)
+      }
+    }
+    
+    runAgents()
+  }, [selectedId])
 
   const selected = complaints.find(c => c.id === selectedId)
 
@@ -267,48 +302,105 @@ export default function GovComplaintsPage() {
                   {/* Sidebar Body */}
                   <div className="p-4 flex flex-col gap-5 flex-1 justify-between">
                     
-                    <div className="flex flex-col gap-4">
-                      {/* Image analysis */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-on-surface-variant font-medium">Photo Check</span>
-                          <span className="text-primary font-semibold">98% Match</span>
+                    {aiLoading ? (
+                      <div className="flex flex-col items-center justify-center py-20 gap-3">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <p className="text-[10px] uppercase tracking-wider text-on-surface-variant">AI Agents analyzing issue...</p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col gap-4">
+                        {/* Image analysis */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="text-on-surface-variant font-medium">Photo Check</span>
+                            <span className="text-primary font-semibold">98% Match</span>
+                          </div>
+                          <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10">
+                            <div
+                              className="absolute inset-0 bg-cover bg-center bg-neutral-900"
+                              style={{ backgroundImage: `url('${selected.photoUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=400&q=80'}')` }}
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
+                            <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                              <span className="text-[9px] text-on-surface bg-surface-container/80 backdrop-blur px-1.5 py-0.5 rounded uppercase mb-1 block w-max">Category: {selected.category}</span>
+                              <span className="text-xs font-semibold text-primary block leading-tight truncate">{selected.description || 'No description provided.'}</span>
+                            </div>
+                          </div>
                         </div>
-                        <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10">
-                          <div
-                            className="absolute inset-0 bg-cover bg-center bg-neutral-900"
-                            style={{ backgroundImage: `url('${selected.photoUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=400&q=80'}')` }}
-                          />
-                          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-                          <div className="absolute bottom-2.5 left-2.5 right-2.5">
-                            <span className="text-[9px] text-on-surface bg-surface-container/80 backdrop-blur px-1.5 py-0.5 rounded uppercase mb-1 block w-max">Category: {selected.category}</span>
-                            <span className="text-xs font-semibold text-primary block leading-tight truncate">{selected.description || 'No description provided.'}</span>
+
+                        {/* Safety Warning from Reasoning Agent */}
+                        {reasoningData && reasoningData.safetyHazards && (
+                          <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl flex items-start gap-2.5">
+                            <span className="material-symbols-outlined text-[16px] text-error shrink-0 mt-0.5" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+                            <div className="text-xs">
+                              <h4 className="font-semibold text-error text-[11px] uppercase tracking-wider">Safety Hazard Detected</h4>
+                              <p className="text-on-surface-variant mt-0.5 leading-relaxed">{reasoningData.safetyHazards}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Complexity & SLA from Analyst & Reasoning Agents */}
+                        <div className="grid grid-cols-2 gap-2.5">
+                          <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col justify-between h-16">
+                            <span className="text-[9px] text-on-surface-variant uppercase tracking-wider font-semibold">AI SLA Limit</span>
+                            <span className="text-xs font-semibold text-primary leading-none">
+                              {reasoningData?.suggestedSla || selected.slaTotal.split(':')[1]?.trim() || selected.slaTotal}
+                            </span>
+                          </div>
+                          <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col justify-between h-16">
+                            <span className="text-[9px] text-on-surface-variant uppercase tracking-wider font-semibold">Complexity</span>
+                            <span className={`text-xs font-semibold leading-none ${
+                              analystData?.complexity === 'High' ? 'text-error' : analystData?.complexity === 'Medium' ? 'text-secondary' : 'text-green-400'
+                            }`}>
+                              {analystData?.complexity || 'Medium'}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* SLA Reasoning from Reasoning Agent */}
+                        {reasoningData && reasoningData.reasoning && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">SLA Reasoning</span>
+                            <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 text-[11px] text-on-surface-variant leading-relaxed">
+                              {reasoningData.reasoning}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Ground Impact from Analyst Agent */}
+                        {analystData && analystData.impact && (
+                          <div className="flex flex-col gap-1">
+                            <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Local Impact</span>
+                            <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 text-[11px] text-on-surface-variant leading-relaxed">
+                              {analystData.impact}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Ground Crew Steps from Analyst Agent */}
+                        {analystData && analystData.steps && analystData.steps.length > 0 && (
+                          <div className="flex flex-col gap-2.5">
+                            <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">AI Dispatch Guidelines</span>
+                            <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col gap-2">
+                              {analystData.steps.map((step, idx) => (
+                                <div key={idx} className="flex gap-2 text-[11px] text-on-surface-variant leading-relaxed">
+                                  <span className="text-primary font-bold">{idx + 1}.</span>
+                                  <span>{step}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Standard Details */}
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Description Details</span>
+                          <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 text-[11px] text-on-surface-variant leading-relaxed">
+                            {selected.description}
                           </div>
                         </div>
                       </div>
-
-                      {/* Small KPI tiles */}
-                      <div className="grid grid-cols-2 gap-2.5">
-                        <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col justify-between h-16">
-                          <span className="text-[10px] text-on-surface-variant uppercase">AI Priority</span>
-                          <span className="text-xs font-semibold text-error leading-none">{selected.priority}</span>
-                        </div>
-                        <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col justify-between h-16">
-                          <span className="text-[10px] text-on-surface-variant uppercase">SLA Limit</span>
-                          <span className="text-xs font-semibold text-primary leading-none">{selected.slaTotal.split(':')[1]?.trim() || selected.slaTotal}</span>
-                        </div>
-                      </div>
-
-                      {/* Similar reports */}
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center justify-between text-xs">
-                          <span className="text-on-surface-variant font-medium">Description Details</span>
-                        </div>
-                        <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 text-xs text-on-surface-variant leading-relaxed">
-                          {selected.description}
-                        </div>
-                      </div>
-                    </div>
+                    )}
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-white/[0.06]">
