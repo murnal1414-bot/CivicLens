@@ -87,6 +87,10 @@ export default function CitizenPage() {
 
     // If map isn't initialized yet, initialize it
     if (!mapInstance.current) {
+      if ((mapRef.current as any)._leaflet_id) {
+        (mapRef.current as any)._leaflet_id = null;
+        mapRef.current.innerHTML = '';
+      }
       const map = L.map(mapRef.current, { zoomControl: false }).setView([lat, lng], 13)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'

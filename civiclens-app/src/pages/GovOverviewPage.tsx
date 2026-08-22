@@ -150,6 +150,10 @@ export default function GovOverviewPage() {
     if (!mapRef.current || complaintsList.length === 0) return
 
     if (!mapInstance.current) {
+      if ((mapRef.current as any)._leaflet_id) {
+        (mapRef.current as any)._leaflet_id = null;
+        mapRef.current.innerHTML = '';
+      }
       const map = L.map(mapRef.current, { zoomControl: false }).setView([22.7196, 75.8577], 12)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap'
