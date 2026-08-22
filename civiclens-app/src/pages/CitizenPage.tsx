@@ -128,34 +128,49 @@ export default function CitizenPage() {
   }, [loading])
 
   const [isFetchingLocation, setIsFetchingLocation] = useState(false)
+  const [locationError, setLocationError] = useState('')
 
-  // Manual location fetch instead of auto-debounce
+  // Fetch location via Nominatim — tries Indore-scoped first, falls back to India-wide
   const handleFetchLocation = async () => {
     if (!address.trim() || !mapInstance.current || !markerRef.current) return
-
-    // Don't search if address is just coordinates
-    if (/^-?\d+(\.\d+)?, \s*-?\d+(\.\d+)?$/.test(address.trim())) return
+    // Skip if already looks like raw coordinates
+    if (/^-?\d+(\.\d+)?\s*,\s*-?\d+(\.\d+)?$/.test(address.trim())) return
 
     setIsFetchingLocation(true)
+    setLocationError('')
     try {
-      const query = encodeURIComponent(`Indore, ${address}`)
-      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`)
-      const data = await res.json()
+      // 1st attempt: scoped to Indore
+      const q1 = encodeURIComponent(`${address}, Indore, India`)
+      const r1 = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${q1}&limit=1&countrycodes=in`,
+        { headers: { 'Accept-Language': 'en' } }
+      )
+      let data = await r1.json()
+
+      // 2nd attempt: broader India-wide search if Indore-scoped found nothing
+      if (!data || data.length === 0) {
+        const q2 = encodeURIComponent(`${address}, India`)
+        const r2 = await fetch(
+          `https://nominatim.openstreetmap.org/search?format=json&q=${q2}&limit=1&countrycodes=in&viewbox=68,8,98,38&bounded=1`,
+          { headers: { 'Accept-Language': 'en' } }
+        )
+        data = await r2.json()
+      }
+
       if (data && data.length > 0) {
-        const first = data[0]
-        const newLat = parseFloat(first.lat)
-        const newLng = parseFloat(first.lon)
-        
+        const newLat = parseFloat(data[0].lat)
+        const newLng = parseFloat(data[0].lon)
         setLat(newLat)
         setLng(newLng)
-        
         markerRef.current?.setLatLng([newLat, newLng])
         mapInstance.current?.setView([newLat, newLng], 15)
+        setAddress(data[0].display_name)   // fill full resolved address
       } else {
-        alert('Location not found. Please try a different address.')
+        setLocationError('Location not found — try a more specific landmark or area name.')
       }
     } catch (err) {
       console.error('Geocode search failed:', err)
+      setLocationError('Could not reach location service. Check your connection.')
     } finally {
       setIsFetchingLocation(false)
     }
@@ -563,7 +578,8 @@ export default function CitizenPage() {
                   <div className="flex gap-2">
                     <input
                       value={address}
-                      onChange={e => setAddress(e.target.value)}
+                      onChange={e => { setAddress(e.target.value); if (locationError) setLocationError('') }}
+                      onKeyDown={e => e.key === 'Enter' && handleFetchLocation()}
                       className="form-input flex-1"
                       placeholder="E.g., Near Palasia Square, M.G. Road"
                       type="text"
@@ -580,6 +596,12 @@ export default function CitizenPage() {
                       Fetch
                     </button>
                   </div>
+                  {locationError && (
+                    <p className="text-[11px] text-error flex items-center gap-1 mt-1">
+                      <span className="material-symbols-outlined text-[13px]">error</span>
+                      {locationError}
+                    </p>
+                  )}
                 </div>
 
                 {gpsOk && (
