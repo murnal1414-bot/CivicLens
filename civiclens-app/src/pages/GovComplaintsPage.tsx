@@ -4,6 +4,7 @@ import { civiclensApi } from '../services/api'
 import type { Complaint } from '../services/api'
 import { runAnalystAgent, runReasoningAgent, runVisionCheckAgent } from '../services/ai'
 import { supabase } from '../services/supabase'
+import UniqueLoading from '@/components/ui/morph-loading'
 
 const priorityConfig = {
   CRITICAL: { label: 'CRITICAL', icon: 'warning', cls: 'badge-critical' },
@@ -25,6 +26,7 @@ const slaColor = {
 
 export default function GovComplaintsPage() {
   const [complaints, setComplaints] = useState<Complaint[]>([])
+  const [loading, setLoading] = useState(true)
   const [selectedId, setSelected] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDept, setSelectedDept] = useState('All Departments')
@@ -63,6 +65,7 @@ export default function GovComplaintsPage() {
       if (data.length > 0 && !selectedId) {
         setSelected(data[0].id)
       }
+      setLoading(false)
     }
     load()
   }, [])
@@ -165,6 +168,12 @@ export default function GovComplaintsPage() {
     <div className="dark flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
+      {loading ? (
+        <div className="pl-60 flex-1 flex flex-col items-center justify-center gap-6 min-h-screen">
+          <UniqueLoading variant="morph" size="lg" className="opacity-80" />
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest animate-pulse">Loading Complaints…</p>
+        </div>
+      ) : (
       <div className="pl-60 flex-1 flex flex-col min-w-0">
         
         {/* Top Header */}
@@ -366,9 +375,9 @@ export default function GovComplaintsPage() {
                   <div className="p-4 flex flex-col gap-5 flex-1 justify-between">
                     
                     {aiLoading ? (
-                      <div className="flex flex-col items-center justify-center py-20 gap-3">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-                        <p className="text-[10px] uppercase tracking-wider text-on-surface-variant">AI Agents analyzing issue...</p>
+                      <div className="flex flex-col items-center justify-center py-16 gap-4">
+                        <UniqueLoading variant="morph" size="md" className="opacity-70" />
+                        <p className="text-[10px] uppercase tracking-wider text-on-surface-variant animate-pulse">AI Agents analyzing issue…</p>
                       </div>
                     ) : (
                       <div className="flex flex-col gap-4">
@@ -511,8 +520,8 @@ export default function GovComplaintsPage() {
 
           </div>
         </main>
-
       </div>
+      )}
     </div>
   )
 }

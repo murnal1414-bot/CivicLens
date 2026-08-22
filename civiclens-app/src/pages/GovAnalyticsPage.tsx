@@ -3,10 +3,12 @@ import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 
 import { supabase } from '../services/supabase'
+import UniqueLoading from '@/components/ui/morph-loading'
 
 export default function GovAnalyticsPage() {
   const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '100%' })
   const [departments, setDepartments] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
   const totalWorkers = departments.reduce((sum, d) => sum + (d.workersCount || 0), 0)
   const activeIssues = stats.open
 
@@ -109,6 +111,7 @@ export default function GovAnalyticsPage() {
 
       const budget = total > 0 ? Math.min(95, Math.round((resolved / total) * 100)) : 0
       setBudgetUsed(budget)
+      setLoading(false)
     }
     load()
   }, [])
@@ -117,6 +120,12 @@ export default function GovAnalyticsPage() {
     <div className="dark flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
+      {loading ? (
+        <div className="pl-60 flex-1 flex flex-col items-center justify-center gap-6 min-h-screen">
+          <UniqueLoading variant="morph" size="lg" className="opacity-80" />
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest animate-pulse">Loading Analytics…</p>
+        </div>
+      ) : (
       <div className="pl-60 flex-1 flex flex-col min-w-0">
         
         {/* Top Header */}
@@ -407,6 +416,7 @@ export default function GovAnalyticsPage() {
 
         </main>
       </div>
+      )}
     </div>
   )
 }

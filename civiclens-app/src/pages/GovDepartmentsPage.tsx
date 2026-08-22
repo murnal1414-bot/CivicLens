@@ -3,9 +3,11 @@ import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 import type { Department } from '../services/api'
 import { supabase } from '../services/supabase'
+import UniqueLoading from '@/components/ui/morph-loading'
 
 export default function GovDepartmentsPage() {
   const [depts, setDepts] = useState<Department[]>([])
+  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
 
   const [officerName, setOfficerName] = useState('Municipal Officer')
@@ -45,6 +47,7 @@ export default function GovDepartmentsPage() {
         }
       })
       setDepts(computedDepts)
+      setLoading(false)
     }
     load()
   }, [])
@@ -79,6 +82,12 @@ export default function GovDepartmentsPage() {
     <div className="dark flex min-h-screen bg-background text-sm">
       <GovSidebar />
 
+      {loading ? (
+        <div className="pl-60 flex-1 flex flex-col items-center justify-center gap-6 min-h-screen">
+          <UniqueLoading variant="morph" size="lg" className="opacity-80" />
+          <p className="text-[10px] text-on-surface-variant uppercase tracking-widest animate-pulse">Loading Departments…</p>
+        </div>
+      ) : (
       <div className="pl-60 flex-1 flex flex-col min-w-0">
         
         {/* Top Header */}
@@ -205,6 +214,7 @@ export default function GovDepartmentsPage() {
 
         </main>
       </div>
+      )}
     </div>
   )
 }
