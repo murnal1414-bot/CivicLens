@@ -41,7 +41,7 @@ const DEFAULT_COMPLAINTS: Complaint[] = [
   { 
     id: '#G-4092-W', 
     date: 'Oct 24, 09:12 AM', 
-    category: 'Water Supply', 
+    category: 'Water Work and Drainage Department', 
     categoryIcon: 'water_drop', 
     location: 'Vijay Nagar, Sec 54', 
     density: 'High', 
@@ -56,8 +56,8 @@ const DEFAULT_COMPLAINTS: Complaint[] = [
   { 
     id: '#G-4091-R', 
     date: 'Oct 24, 08:45 AM', 
-    category: 'Roads & Public Works', 
-    categoryIcon: 'add_road', 
+    category: 'Public Work Department', 
+    categoryIcon: 'construction', 
     location: 'Palasia Square', 
     density: 'Med', 
     priority: 'HIGH', 
@@ -71,7 +71,7 @@ const DEFAULT_COMPLAINTS: Complaint[] = [
   { 
     id: '#G-4088-S', 
     date: 'Oct 23, 11:30 PM', 
-    category: 'Sanitation & Waste', 
+    category: 'Health Department (Sanitation and Solid Waste Management)', 
     categoryIcon: 'delete_forever', 
     location: 'Bhawarkuan', 
     density: 'Low', 
@@ -87,23 +87,89 @@ const DEFAULT_COMPLAINTS: Complaint[] = [
 
 // Initial mock departments
 const DEFAULT_DEPARTMENTS: Department[] = [
-  { id: 'DEPT-01', name: 'Water Supply', icon: 'water_drop', activeIssues: 28, workersCount: 42, status: 'Active', avgFixTime: '2.5h', onTimeRate: 98 },
-  { id: 'DEPT-02', name: 'Drainage & Sewerage', icon: 'waves', activeIssues: 45, workersCount: 35, status: 'Active', avgFixTime: '4.1h', onTimeRate: 82 },
-  { id: 'DEPT-03', name: 'Health & Sanitation', icon: 'delete_forever', activeIssues: 82, workersCount: 120, status: 'Active', avgFixTime: '1.8h', onTimeRate: 96 },
-  { id: 'DEPT-04', name: 'Streetlights', icon: 'lightbulb', activeIssues: 19, workersCount: 22, status: 'Active', avgFixTime: '6.2h', onTimeRate: 88 },
-  { id: 'DEPT-05', name: 'Roads & Public Works', icon: 'add_road', activeIssues: 64, workersCount: 85, status: 'Active', avgFixTime: '12h', onTimeRate: 75 },
-  { id: 'DEPT-06', name: 'Parks & Gardens', icon: 'forest', activeIssues: 12, workersCount: 14, status: 'Active', avgFixTime: '18h', onTimeRate: 90 },
-  { id: 'DEPT-07', name: 'Fire Safety', icon: 'local_fire_department', activeIssues: 3, workersCount: 50, status: 'Active', avgFixTime: '0.4h', onTimeRate: 100 },
-  { id: 'DEPT-08', name: 'Revenue', icon: 'payments', activeIssues: 7, workersCount: 10, status: 'Active', avgFixTime: '24h', onTimeRate: 95 },
-  { id: 'DEPT-09', name: 'IT Services', icon: 'computer', activeIssues: 4, workersCount: 8, status: 'Active', avgFixTime: '1.2h', onTimeRate: 98 },
-  { id: 'DEPT-10', name: 'Housing & Environment', icon: 'apartment', activeIssues: 15, workersCount: 18, status: 'Under Review', avgFixTime: '36h', onTimeRate: 70 },
-  { id: 'DEPT-11', name: 'Food & Supplies', icon: 'shopping_bag', activeIssues: 2, workersCount: 6, status: 'Active', avgFixTime: '8h', onTimeRate: 92 },
-  { id: 'DEPT-12', name: 'Education', icon: 'school', activeIssues: 5, workersCount: 12, status: 'Active', avgFixTime: '15h', onTimeRate: 94 },
-  { id: 'DEPT-13', name: 'Law & Administration', icon: 'balance', activeIssues: 8, workersCount: 15, status: 'Active', avgFixTime: '72h', onTimeRate: 85 },
+  { id: 'DEPT-01', name: 'Water Work and Drainage Department', icon: 'water_drop', activeIssues: 28, workersCount: 42, status: 'Active', avgFixTime: '2.5h', onTimeRate: 98 },
+  { id: 'DEPT-02', name: 'Public Work Department', icon: 'construction', activeIssues: 64, workersCount: 85, status: 'Active', avgFixTime: '12h', onTimeRate: 75 },
+  { id: 'DEPT-03', name: 'Health Department (Sanitation and Solid Waste Management)', icon: 'delete_forever', activeIssues: 82, workersCount: 120, status: 'Active', avgFixTime: '1.8h', onTimeRate: 96 },
+  { id: 'DEPT-04', name: 'Electrical and Mechanical Department', icon: 'lightbulb', activeIssues: 19, workersCount: 22, status: 'Active', avgFixTime: '6.2h', onTimeRate: 88 },
+  { id: 'DEPT-05', name: 'Fire Department', icon: 'local_fire_department', activeIssues: 3, workersCount: 50, status: 'Active', avgFixTime: '0.4h', onTimeRate: 100 },
+  { id: 'DEPT-06', name: 'Revenue Department', icon: 'payments', activeIssues: 7, workersCount: 10, status: 'Active', avgFixTime: '24h', onTimeRate: 95 },
+  { id: 'DEPT-07', name: 'Information Technology Department', icon: 'computer', activeIssues: 4, workersCount: 8, status: 'Active', avgFixTime: '1.2h', onTimeRate: 98 },
+  { id: 'DEPT-08', name: 'Housing & Environmental Department', icon: 'apartment', activeIssues: 15, workersCount: 18, status: 'Under Review', avgFixTime: '36h', onTimeRate: 70 },
+  { id: 'DEPT-09', name: 'Food and Civil Supplies Department', icon: 'shopping_bag', activeIssues: 2, workersCount: 6, status: 'Active', avgFixTime: '8h', onTimeRate: 92 },
+  { id: 'DEPT-10', name: 'Education Department', icon: 'school', activeIssues: 5, workersCount: 12, status: 'Active', avgFixTime: '15h', onTimeRate: 94 },
+  { id: 'DEPT-11', name: 'Law and General Administration Department', icon: 'balance', activeIssues: 8, workersCount: 15, status: 'Active', avgFixTime: '72h', onTimeRate: 85 },
+  { id: 'DEPT-12', name: 'Planning & Rehabilitation Department', icon: 'engineering', activeIssues: 6, workersCount: 18, status: 'Active', avgFixTime: '48h', onTimeRate: 89 },
+  { id: 'DEPT-13', name: 'Accounts Department', icon: 'account_balance_wallet', activeIssues: 4, workersCount: 10, status: 'Active', avgFixTime: '24h', onTimeRate: 93 },
+  { id: 'DEPT-14', name: 'Removal Department', icon: 'delete_sweep', activeIssues: 9, workersCount: 20, status: 'Active', avgFixTime: '12h', onTimeRate: 91 },
+  { id: 'DEPT-15', name: 'Zoo Department', icon: 'pets', activeIssues: 3, workersCount: 15, status: 'Active', avgFixTime: '6h', onTimeRate: 97 },
+  { id: 'DEPT-16', name: 'Garden Department & Regional Park', icon: 'forest', activeIssues: 12, workersCount: 14, status: 'Active', avgFixTime: '18h', onTimeRate: 90 },
 ]
+
+// Helper function to cluster active complaints by area
+function clusterComplaints(list: Complaint[]): Complaint[] {
+  const activeList = list.filter(c => c.status !== 'RESOLVED')
+  const clusters: Complaint[][] = []
+
+  for (const c of activeList) {
+    let added = false
+    for (const cl of clusters) {
+      if (cl.some(item => {
+        if (item.latitude && item.longitude && c.latitude && c.longitude) {
+          return Math.hypot(item.latitude - c.latitude, item.longitude - c.longitude) < 0.008
+        }
+        const loc1 = item.location.toLowerCase()
+        const loc2 = c.location.toLowerCase()
+        const clean = (s: string) => s.split(',')[0].trim().split(' ')[0]
+        const w1 = clean(loc1)
+        const w2 = clean(loc2)
+        if (w1 && w2 && w1.length > 2 && w2.length > 2) {
+          return w1 === w2 || loc1.includes(w2) || loc2.includes(w1)
+        }
+        return loc1 === loc2
+      })) {
+        cl.push(c)
+        added = true
+        break
+      }
+    }
+    if (!added) {
+      clusters.push([c])
+    }
+  }
+
+  const clusterMap = new Map<string, { size: number; priority: Priority; displayLocation: string }>()
+  for (const cl of clusters) {
+    if (cl.length >= 4) {
+      const count = cl.length
+      const mainLocation = cl[0].location.replace(/^🚨\s*\[MAJOR CLUSTER[^\]]*\]\s*/, '')
+      for (const c of cl) {
+        clusterMap.set(c.id, {
+          size: count,
+          priority: 'CRITICAL',
+          displayLocation: `🚨 [MAJOR CLUSTER - ${count} Reports] ${mainLocation}`
+        })
+      }
+    }
+  }
+
+  return list.map(c => {
+    const info = clusterMap.get(c.id)
+    if (info) {
+      return {
+        ...c,
+        priority: info.priority,
+        location: info.displayLocation,
+        slaRemaining: 'Immediate action required',
+        slaTotal: `Cluster: ${info.size} active reports`
+      }
+    }
+    return c
+  })
+}
 
 export const civiclensApi = {
   async getComplaints(): Promise<Complaint[]> {
+    let list: Complaint[] = []
     try {
       const { data, error } = await supabase
         .from('complaints')
@@ -113,14 +179,16 @@ export const civiclensApi = {
       if (error) {
         console.error('Error fetching complaints from Supabase:', error.message);
         const local = localStorage.getItem('civiclens_complaints');
-        return local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
+        list = local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
+      } else {
+        list = data || [];
       }
-      return data || [];
     } catch (e) {
       console.error('Database connection failed:', e);
       const local = localStorage.getItem('civiclens_complaints');
-      return local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
+      list = local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
     }
+    return clusterComplaints(list)
   },
 
   async addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'>): Promise<Complaint> {
@@ -200,7 +268,7 @@ export const civiclensApi = {
 
   getDepartments(): Department[] {
     const data = localStorage.getItem('civiclens_departments')
-    if (!data) {
+    if (!data || JSON.parse(data).length !== 16) {
       localStorage.setItem('civiclens_departments', JSON.stringify(DEFAULT_DEPARTMENTS))
       return DEFAULT_DEPARTMENTS
     }

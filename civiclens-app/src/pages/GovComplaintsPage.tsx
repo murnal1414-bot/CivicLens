@@ -30,6 +30,7 @@ export default function GovComplaintsPage() {
   const [selectedId, setSelected] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDept, setSelectedDept] = useState('All Departments')
+  const [deptsList, setDeptsList] = useState<string[]>([])
   const [sortBy, setSortBy] = useState('Sort by Priority')
   const [aiLoading, setAiLoading] = useState(false)
   const [analystData, setAnalystData] = useState<{ impact: string; complexity: 'Low' | 'Medium' | 'High'; complexityReason: string; steps: string[] } | null>(null)
@@ -65,6 +66,8 @@ export default function GovComplaintsPage() {
       if (data.length > 0 && !selectedId) {
         setSelected(data[0].id)
       }
+      const departmentsData = civiclensApi.getDepartments()
+      setDeptsList(['All Departments', ...departmentsData.map(d => d.name)])
       setLoading(false)
     }
     load()
@@ -231,12 +234,9 @@ export default function GovComplaintsPage() {
                     onChange={(e) => setSelectedDept(e.target.value)}
                     className="appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer hover:bg-surface-container"
                   >
-                    <option>All Departments</option>
-                    <option>Water Supply</option>
-                    <option>Drainage &amp; Sewerage</option>
-                    <option>Health &amp; Sanitation</option>
-                    <option>Streetlights</option>
-                    <option>Roads &amp; Public Works</option>
+                    {deptsList.map(name => (
+                      <option key={name}>{name}</option>
+                    ))}
                   </select>
                   <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
                 </div>

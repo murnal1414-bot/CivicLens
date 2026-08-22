@@ -9,27 +9,41 @@ import 'leaflet/dist/leaflet.css'
 import UniqueLoading from '@/components/ui/morph-loading'
 
 const SUBCATS: Record<string, string[]> = {
-  water:      ['Water leaking from pipe', 'No water supply', 'Low water pressure', 'Dirty water'],
-  drainage:   ['Drain blocked', 'Open manhole', 'Sewage overflow'],
-  sanitation: ['Garbage not collected', 'Illegal dumping', 'Public toilet issue'],
-  electrical: ['Streetlight not working', 'Exposed wiring', 'Transformer problem'],
-  roads:      ['Pothole', 'Broken footpath', 'Road caved in'],
-  parks:      ['Broken equipment', 'Overgrown grass', 'Broken fence'],
-  fire:       ['Fire hazard', 'Blocked fire exit'],
-  revenue:    ['Property tax problem', 'Unauthorized construction'],
-  housing:    ['Illegal building', 'Pollution or bad smell'],
+  water_work_drainage:     ['Water leaking from pipe', 'No water supply', 'Low water pressure', 'Dirty water', 'Drain blocked', 'Open manhole', 'Sewage overflow'],
+  public_work:             ['Pothole', 'Broken footpath', 'Road caved in', 'Bridge structural issue'],
+  health_sanitation:       ['Garbage not collected', 'Illegal dumping', 'Public toilet issue', 'Waste bin overflow'],
+  electrical_mechanical:   ['Streetlight not working', 'Exposed wiring', 'Transformer problem', 'Mechanical failure'],
+  fire:                    ['Fire hazard', 'Blocked fire exit', 'Faulty fire extinguisher'],
+  revenue:                 ['Property tax problem', 'Unauthorized construction', 'Tax evasion report'],
+  information_technology:  ['Citizen portal bug', 'App connection issue', 'Payment gateway down'],
+  housing_environment:     ['Illegal building', 'Pollution or bad smell', 'Tree cutting issue'],
+  food_civil_supplies:     ['Ration card issues', 'Black marketing', 'Adulterated food'],
+  education:               ['Government school facility', 'Teacher absence', 'Scholarship issues'],
+  law_general_admin:       ['Officer misbehavior', 'Corrupt practice', 'Delay in certificate'],
+  planning_rehabilitation: ['Illegal encroachment', 'Slum redevelopment query', 'Rehabilitation help'],
+  accounts:                ['Vendor payment delay', 'Audit query', 'Financial discrepancy'],
+  removal:                 ['Encroachment removal', 'Stray cattle removal', 'Illegal hoarding'],
+  zoo:                     ['Animal welfare query', 'Cage maintenance', 'Visitor safety issue'],
+  garden_regional_park:    ['Broken equipment', 'Overgrown grass', 'Broken fence', 'Park littering']
 }
 
 const AI_HINTS: Record<string, string> = {
-  water:      '→ Water Department · Priority: High · Expected fix: within 24 hours',
-  drainage:   '→ Water Works · Priority: High · Expected fix: within 24 hours',
-  sanitation: '→ Health & Sanitation · Priority: Medium · Expected fix: within 48 hours',
-  electrical: '→ Electrical Department · Priority: Medium · Expected fix: within 48 hours',
-  roads:      '→ Public Works · Priority: Medium–High · Depends on traffic impact',
-  parks:      '→ Housing & Environment · Priority: Low · Expected fix: within 72 hours',
-  fire:       '→ Fire Department · Priority: CRITICAL · Immediate action initiated',
-  revenue:    '→ Revenue Department · Priority: Low · Expected: 5–7 business days',
-  housing:    '→ Housing Department · Priority: Medium · Expected fix: within 72 hours',
+  water_work_drainage:     '→ Water Work & Drainage · Priority: High · Expected fix: within 24 hours',
+  public_work:             '→ Public Work · Priority: Medium–High · Depends on traffic impact',
+  health_sanitation:       '→ Health (Sanitation) · Priority: Medium · Expected fix: within 48 hours',
+  electrical_mechanical:   '→ Electrical & Mechanical · Priority: Medium · Expected fix: within 48 hours',
+  fire:                    '→ Fire Department · Priority: CRITICAL · Immediate action initiated',
+  revenue:                 '→ Revenue Department · Priority: Low · Expected: 5–7 business days',
+  information_technology:  '→ IT Department · Priority: Low · Expected: 3–5 business days',
+  housing_environment:     '→ Housing & Environmental · Priority: Medium · Expected fix: within 72 hours',
+  food_civil_supplies:     '→ Food & Civil Supplies · Priority: Medium · Expected fix: within 72 hours',
+  education:               '→ Education Department · Priority: Low · Expected: 5–7 business days',
+  law_general_admin:       '→ Law & Admin · Priority: Low · Expected: 5–7 business days',
+  planning_rehabilitation: '→ Planning & Rehab · Priority: Medium · Expected: 3–5 business days',
+  accounts:                '→ Accounts Department · Priority: Low · Expected: 5–7 business days',
+  removal:                 '→ Removal Department · Priority: High · Expected: 24–48 hours',
+  zoo:                     '→ Zoo Department · Priority: Medium · Expected: 24–48 hours',
+  garden_regional_park:    '→ Garden & Park · Priority: Low · Expected: within 72 hours',
 }
 
 export default function CitizenPage() {
@@ -259,16 +273,46 @@ export default function CitizenPage() {
     try {
       const result = await runRouterAgent(text)
       const categoryToKey: Record<string, string> = {
-        'Water Supply': 'water',
-        'Drainage & Sewerage': 'drainage',
-        'Health & Sanitation': 'sanitation',
-        'Electrical & Mechanical': 'electrical',
-        'Streetlights': 'electrical',
-        'Roads & Public Works': 'roads',
-        'Parks & Gardens': 'parks',
+        'Water Work & Drainage Department': 'water_work_drainage',
+        'Water Work and Drainage Department': 'water_work_drainage',
+        'Water Supply': 'water_work_drainage',
+        'Drainage & Sewerage': 'water_work_drainage',
+        'Public Works Department': 'public_work',
+        'Public Work Department': 'public_work',
+        'Roads & Public Works': 'public_work',
+        'Health & Sanitation Department': 'health_sanitation',
+        'Health Department (Sanitation and Solid Waste Management)': 'health_sanitation',
+        'Health & Sanitation': 'health_sanitation',
+        'Electrical & Mechanical Department': 'electrical_mechanical',
+        'Electrical and Mechanical Department': 'electrical_mechanical',
+        'Streetlights': 'electrical_mechanical',
+        'Fire Department': 'fire',
         'Fire Safety': 'fire',
+        'Taxation & Revenue Department': 'revenue',
+        'Revenue Department': 'revenue',
         'Revenue': 'revenue',
-        'Housing & Environment': 'housing'
+        'Information Technology Department': 'information_technology',
+        'IT Services': 'information_technology',
+        'Housing & Environmental Department': 'housing_environment',
+        'Housing & Environment': 'housing_environment',
+        'Food & Civil Supplies Department': 'food_civil_supplies',
+        'Food and Civil Supplies Department': 'food_civil_supplies',
+        'Food & Supplies': 'food_civil_supplies',
+        'Municipal Education Department': 'education',
+        'Education Department': 'education',
+        'Education': 'education',
+        'Law & General Administration Department': 'law_general_admin',
+        'Law and General Administration Department': 'law_general_admin',
+        'Law & Administration': 'law_general_admin',
+        'Planning & Rehabilitation Department': 'planning_rehabilitation',
+        'Audits & Accounts Department': 'accounts',
+        'Accounts Department': 'accounts',
+        'Encroachment Removal Department': 'removal',
+        'Removal Department': 'removal',
+        'Kamla Nehru Zoo Department': 'zoo',
+        'Zoo Department': 'zoo',
+        'Garden Department & Regional Park': 'garden_regional_park',
+        'Parks & Gardens': 'garden_regional_park',
       }
       
       const key = categoryToKey[result.category] || ''
@@ -337,28 +381,42 @@ export default function CitizenPage() {
     
     // Map selected dept key to official department names
     const categoryMapping: Record<string, string> = {
-      water: 'Water Supply',
-      drainage: 'Drainage & Sewerage',
-      sanitation: 'Health & Sanitation',
-      electrical: 'Electrical & Mechanical',
-      roads: 'Roads & Public Works',
-      parks: 'Parks & Gardens',
-      fire: 'Fire Safety',
-      revenue: 'Revenue',
-      housing: 'Housing & Environment',
+      water_work_drainage: 'Water Work and Drainage Department',
+      public_work: 'Public Work Department',
+      health_sanitation: 'Health Department (Sanitation and Solid Waste Management)',
+      electrical_mechanical: 'Electrical and Mechanical Department',
+      fire: 'Fire Department',
+      revenue: 'Revenue Department',
+      information_technology: 'Information Technology Department',
+      housing_environment: 'Housing & Environmental Department',
+      food_civil_supplies: 'Food and Civil Supplies Department',
+      education: 'Education Department',
+      law_general_admin: 'Law and General Administration Department',
+      planning_rehabilitation: 'Planning & Rehabilitation Department',
+      accounts: 'Accounts Department',
+      removal: 'Removal Department',
+      zoo: 'Zoo Department',
+      garden_regional_park: 'Garden Department & Regional Park',
     }
 
-    const categoryName = categoryMapping[dept] || 'General Administration'
+    const categoryName = categoryMapping[dept] || 'General Administration Department'
     const categoryIconMapping: Record<string, string> = {
-      water: 'water_drop',
-      drainage: 'waves',
-      sanitation: 'delete_forever',
-      electrical: 'lightbulb',
-      roads: 'add_road',
-      parks: 'forest',
+      water_work_drainage: 'water_drop',
+      public_work: 'construction',
+      health_sanitation: 'delete_forever',
+      electrical_mechanical: 'lightbulb',
       fire: 'local_fire_department',
       revenue: 'payments',
-      housing: 'apartment',
+      information_technology: 'computer',
+      housing_environment: 'apartment',
+      food_civil_supplies: 'shopping_bag',
+      education: 'school',
+      law_general_admin: 'balance',
+      planning_rehabilitation: 'engineering',
+      accounts: 'account_balance_wallet',
+      removal: 'delete_sweep',
+      zoo: 'pets',
+      garden_regional_park: 'forest',
     }
     const categoryIcon = categoryIconMapping[dept] || 'balance'
 
@@ -392,16 +450,17 @@ export default function CitizenPage() {
     switch (dept) {
       case 'fire':
         return '🚨 EMERGENCY SLA: Immediate dispatch initiated!'
-      case 'water':
-      case 'drainage':
+      case 'water_work_drainage':
+      case 'removal':
         return '🕒 SLA Target: Fixed within 24 hours'
-      case 'sanitation':
-      case 'electrical':
-      case 'housing':
+      case 'health_sanitation':
+      case 'electrical_mechanical':
+      case 'housing_environment':
+      case 'zoo':
         return '🕒 SLA Target: Fixed within 48 hours'
-      case 'parks':
+      case 'garden_regional_park':
         return '🕒 SLA Target: Fixed within 72 hours'
-      case 'roads':
+      case 'public_work':
         return '🕒 SLA Target: Fixed within 5 business days'
       default:
         return '🕒 SLA Target: Fixed within 48 hours'

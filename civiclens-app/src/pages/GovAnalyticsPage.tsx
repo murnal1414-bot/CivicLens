@@ -12,7 +12,7 @@ export default function GovAnalyticsPage() {
   const totalWorkers = departments.reduce((sum, d) => sum + (d.workersCount || 0), 0)
   const activeIssues = stats.open
 
-  const [deptFilter, setDeptFilter] = useState('Health & Sanitation')
+  const [deptFilter, setDeptFilter] = useState('Health Department (Sanitation and Solid Waste Management)')
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('month')
 
   const [officerName, setOfficerName] = useState('Municipal Officer')
@@ -177,10 +177,9 @@ export default function GovAnalyticsPage() {
                   onChange={e => setDeptFilter(e.target.value)}
                   className="appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer hover:bg-surface-container"
                 >
-                  <option>Health &amp; Sanitation</option>
-                  <option>Water Supply</option>
-                  <option>Drainage</option>
-                  <option>Roads</option>
+                  {departments.map(d => (
+                    <option key={d.name}>{d.name}</option>
+                  ))}
                 </select>
                 <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
               </div>
