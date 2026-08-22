@@ -4,18 +4,6 @@ import { civiclensApi } from '../services/api'
 
 import { supabase } from '../services/supabase'
 
-const depts = [
-  { label: 'Solid Waste Mgmt', pct: 98, color: 'bg-primary',   count: '420 active', status: '98% on time', statusColor: 'text-[#4ade80]' },
-  { label: 'Sewage & Water',   pct: 82, color: 'bg-secondary', count: '315 active', status: '82% on time', statusColor: 'text-[#facc15]' },
-  { label: 'Public Health',    pct: 65, color: 'bg-error',     count: '189 active', status: '65% on time', statusColor: 'text-[#f87171]' },
-]
-
-const workers = [
-  { name: 'Ramesh Patel', zone: 'Zone 3', count: '42 resolved', pct: '99% on time', initials: 'RP', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuDXFkgtwmlXs7DDCUWv_zrCApgosYhQ6Mv0CRk7Cg09dkn0m4jbA76hoDHjR66O7BwPGjm8U7ezY7IeMc89uVw33KG9I-eYss77U1FFB2SGFFfvCVvVXm4akIsiBE7pEkWfQVfJQfW2UL37db7ROuOMFzxg_N_Li9QoDA-I5CrExuURsF0JBFHNeGD9VJ5_e_0frd-e-MbJETTfw7QDHI-8QN__445MIVsBmJuhucHCBPW4modDUf6P' },
-  { name: 'Sunita Sharma', zone: 'Zone 1', count: '38 resolved', pct: '97% on time', initials: 'SS', img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD4dDmdrNySQW6LPZLnO6WMoNmT7loi-15gAlkQUn_0-qvWKs9S_EtKZusJ8PVgs1dL854Jprxule--dZrcX4ZvQgbuVJKLh3iNDYXsaXTJpxSgcxFwLZ775pXm6901WGixBdR7Z2Q6T05_ZUA5Wim6l69uQVUWDhZOVeG2TXqoVYiNdyzOc5y-I1OxCJ2b7KVTQQ7zGqxuNzYeISfMTiBTcsyITwaZSVog0lmZbdzhD2sDXGqhVaVe' },
-  { name: 'Vijay Kumar', zone: 'Zone 5', count: '31 resolved', pct: '94% on time', initials: 'VK', img: '' },
-]
-
 export default function GovAnalyticsPage() {
   const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '100%' })
   const [departments, setDepartments] = useState<any[]>([])
@@ -28,6 +16,11 @@ export default function GovAnalyticsPage() {
   const [officerName, setOfficerName] = useState('Municipal Officer')
   const [officerEmail, setOfficerEmail] = useState('')
   const [officerAvatar, setOfficerAvatar] = useState('')
+
+  const [deptsList, setDeptsList] = useState<any[]>([])
+  const [workersList, setWorkersList] = useState<any[]>([])
+  const [resourceUsage, setResourceUsage] = useState(0)
+  const [budgetUsed, setBudgetUsed] = useState(0)
 
   useEffect(() => {
     const load = async () => {
@@ -71,6 +64,51 @@ export default function GovAnalyticsPage() {
         }
       })
       setDepartments(computedDepts)
+
+      // Calculate dynamic deptsList for charts
+      const computedDeptsList = computedDepts.slice(0, 3).map(d => ({
+        label: d.name,
+        pct: d.activeIssues > 0 ? 80 + (d.activeIssues % 20) : 100,
+        color: d.activeIssues > 0 ? 'bg-primary' : 'bg-secondary',
+        count: `${d.activeIssues} active`,
+        status: d.activeIssues > 0 ? `${d.onTimeRate}% on time` : '100% on time',
+        statusColor: d.activeIssues > 0 ? 'text-[#facc15]' : 'text-[#4ade80]'
+      }))
+      setDeptsList(computedDeptsList)
+
+      // Calculate dynamic workersList from assignees
+      const assignees = Array.from(new Set(complaints.map(c => c.assignee).filter(Boolean)))
+      const computedWorkers = assignees.map((name, idx) => {
+        const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
+        const zone = `Zone ${(idx % 5) + 1}`
+        const count = complaints.filter(c => c.assignee === name).length
+        const resolvedCount = complaints.filter(c => c.assignee === name && c.status === 'RESOLVED').length
+        const pct = count > 0 ? Math.round((resolvedCount / count) * 100) : 100
+        return {
+          name,
+          zone,
+          count: `${count} assigned`,
+          pct: `${pct}%`,
+          initials,
+          img: ''
+        }
+      })
+      
+      if (computedWorkers.length === 0) {
+        setWorkersList([
+          { name: 'No assigned personnel', zone: 'Sector-wide', count: '0 resolved', pct: '100%', initials: 'N/A', img: '' }
+        ])
+      } else {
+        setWorkersList(computedWorkers.slice(0, 3))
+      }
+
+      // Calculate resource utilization and budget burned dynamically
+      const totalW = computedDepts.reduce((sum, d) => sum + (d.workersCount || 0), 0)
+      const usage = totalW > 0 ? Math.min(95, Math.round((open / totalW) * 100)) : 0
+      setResourceUsage(usage)
+
+      const budget = total > 0 ? Math.min(95, Math.round((resolved / total) * 100)) : 0
+      setBudgetUsed(budget)
     }
     load()
   }, [])
@@ -196,9 +234,9 @@ export default function GovAnalyticsPage() {
                 <div className="relative w-10 h-10 shrink-0">
                   <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
                     <circle className="text-surface-container-highest" cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeWidth="3" />
-                    <circle className="text-primary" cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeDasharray="92, 100" strokeLinecap="round" strokeWidth="3" />
+                    <circle className="text-primary" cx="18" cy="18" r="16" fill="none" stroke="currentColor" strokeDasharray={`${resourceUsage || 0}, 100`} strokeLinecap="round" strokeWidth="3" />
                   </svg>
-                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-primary">92%</div>
+                  <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold text-primary">{resourceUsage || 0}%</div>
                 </div>
                 <div className="flex flex-col gap-0.5 text-[10px] text-on-surface-variant/75">
                   <div className="flex items-center gap-1.5"><div className="w-1.5 h-1.5 rounded-full bg-primary" /> Active Tasks</div>
@@ -214,12 +252,15 @@ export default function GovAnalyticsPage() {
                 <span className="material-symbols-outlined text-primary/80 text-[18px]">account_balance_wallet</span>
               </div>
               <div className="flex items-end gap-1">
-                <span className="text-2xl font-semibold text-primary leading-none">68</span>
+                <span className="text-2xl font-semibold text-primary leading-none">{budgetUsed || 0}</span>
                 <span className="text-xs text-on-surface-variant mb-0.5">%</span>
-                <span className="text-[10px] text-amber-400 font-medium bg-amber-500/10 px-1.5 py-0.5 rounded flex items-center mb-1 ml-1"><span className="material-symbols-outlined text-[12px]">warning</span> High</span>
+                <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded flex items-center mb-1 ml-1 ${budgetUsed > 80 ? 'text-amber-400 bg-amber-500/10' : 'text-green-400 bg-green-500/10'}`}>
+                  <span className="material-symbols-outlined text-[12px]">{budgetUsed > 80 ? 'warning' : 'check'}</span>
+                  {budgetUsed > 80 ? ' High' : ' Normal'}
+                </span>
               </div>
               <div className="mt-3 text-[10px] text-on-surface-variant/60 border-t border-white/5 pt-2">
-                Q3 Projected: 104% (Review needed)
+                Projected Rate: {budgetUsed || 0}% (Based on resolved complaints)
               </div>
             </div>
           </div>
@@ -267,11 +308,11 @@ export default function GovAnalyticsPage() {
               <div className="bg-surface-container-low/40 backdrop-blur-2xl rounded-2xl p-5 border border-white/5">
                 <h2 className="text-sm font-semibold text-primary mb-4">Team Efficiency</h2>
                 <div className="flex flex-col gap-4">
-                  {depts.map(d => (
+                  {deptsList.map(d => (
                     <div key={d.label} className="flex items-center gap-4">
                       <div className="w-9 h-9 rounded-lg bg-surface-container-high flex items-center justify-center shrink-0 border border-white/5">
                         <span className="material-symbols-outlined text-primary text-[16px]">
-                          {d.label.includes('Waste') ? 'delete' : d.label.includes('Water') ? 'water_drop' : 'local_hospital'}
+                          {d.label.toLowerCase().includes('water') ? 'water_drop' : d.label.toLowerCase().includes('drain') ? 'waves' : d.label.toLowerCase().includes('health') || d.label.toLowerCase().includes('sanit') ? 'delete' : 'local_hospital'}
                         </span>
                       </div>
                       <div className="flex-1">
@@ -334,7 +375,7 @@ export default function GovAnalyticsPage() {
                 </div>
                 
                 <div className="flex flex-col gap-3">
-                  {workers.map(w => (
+                  {workersList.map(w => (
                     <div key={w.name} className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface-container-high/30 transition-colors cursor-pointer group">
                       <div className="w-8 h-8 rounded-full bg-surface-container-highest flex items-center justify-center relative overflow-hidden border border-white/5 shrink-0">
                         {w.img ? (

@@ -334,7 +334,7 @@ export default function GovComplaintsPage() {
                 </div>
                 {/* Pagination */}
                 <div className="px-4 py-3 border-t border-white/[0.06] bg-surface-container-lowest flex items-center justify-between text-xs">
-                  <span className="text-on-surface-variant">Showing 1–3 of 142 Active Reports</span>
+                  <span className="text-on-surface-variant">Showing 1–{filtered.length} of {filtered.length} Active Reports</span>
                   <div className="flex gap-1">
                     <button disabled className="w-7 h-7 rounded border border-white/10 flex items-center justify-center text-on-surface-variant disabled:opacity-40">
                       <span className="material-symbols-outlined text-[16px]">chevron_left</span>
