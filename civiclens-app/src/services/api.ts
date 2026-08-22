@@ -1,7 +1,9 @@
 import { supabase } from './supabase'
+import { runVisionCheckAgent } from './ai'
+import { VERIFICATION_CONFIG } from '../config/verification'
 
 export type Priority = 'CRITICAL' | 'HIGH' | 'MEDIUM'
-export type ComplaintStatus = 'OPEN' | 'ASSIGNED' | 'RESOLVED'
+export type ComplaintStatus = 'OPEN' | 'ASSIGNED' | 'RESOLVED' | 'PENDING_VERIFICATION' | 'REJECTED'
 
 export type Complaint = {
   id: string
@@ -23,6 +25,26 @@ export type Complaint = {
   citizenPhone?: string
   latitude?: number
   longitude?: number
+  capturedAt?: string // Camera capture timestamp
+}
+
+export type ComplaintVerification = {
+  id: string
+  complaintId: string
+  imageUrl?: string
+  detectedCategory?: string
+  selectedCategory?: string
+  imageConfidence?: number
+  imageMatch?: boolean
+  gpsVerified?: string // 'PASSED' | 'SUSPICIOUS' | 'UNAVAILABLE'
+  gpsDistance?: number // distance in km
+  timestampVerified?: boolean
+  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH'
+  verificationStatus?: 'PENDING' | 'VERIFIED' | 'REJECTED'
+  verificationReason?: string
+  verifiedBy?: string
+  verifiedAt?: string
+  createdAt: string
 }
 
 export type Department = {
@@ -213,6 +235,18 @@ function clusterComplaints(list: Complaint[]): Complaint[] {
   })
 }
 
+function getOrthoDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): number {
+  const R = 6371; // Radius of the earth in km
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c;
+}
+
 export const civiclensApi = {
   async getComplaints(): Promise<Complaint[]> {
     let list: Complaint[] = []
@@ -237,17 +271,43 @@ export const civiclensApi = {
     return clusterComplaints(list)
   },
 
-  async addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'>): Promise<Complaint> {
+  async addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'> & { deviceLatitude?: number; deviceLongitude?: number; capturedAt?: string }): Promise<Complaint> {
     const id = `#G-${Math.floor(1000 + Math.random() * 9000)}-${complaint.category.charAt(0).toUpperCase()}`
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
     const dateStr = new Date().toLocaleDateString('en-US', options)
+
+    // 1. Synchronously execute AI verification to determine initial risk & status
+    let initialStatus: ComplaintStatus = 'OPEN'
+    let verification: ComplaintVerification | null = null
+
+    if (complaint.photoUrl) {
+      try {
+        verification = await this.verifyComplaintEvidence(
+          id,
+          complaint.category,
+          complaint.description,
+          complaint.photoUrl,
+          complaint.latitude,
+          complaint.longitude,
+          complaint.deviceLatitude,
+          complaint.deviceLongitude,
+          complaint.capturedAt
+        )
+        if (verification.riskLevel === 'HIGH') {
+          initialStatus = 'PENDING_VERIFICATION'
+        }
+      } catch (e) {
+        console.error("AI Evidence Verification failed, placing in review queue:", e)
+        initialStatus = 'PENDING_VERIFICATION'
+      }
+    }
 
     const newComplaint: Complaint = {
       ...complaint,
       id,
       date: dateStr,
-      status: 'OPEN',
-      slaRemaining: '23h 59m left',
+      status: initialStatus,
+      slaRemaining: initialStatus === 'PENDING_VERIFICATION' ? 'Awaiting Verification' : '23h 59m left',
       slaTotal: 'Limit: 24 hours',
       initials: complaint.assignee ? complaint.assignee.split(' ').map(n => n[0]).join('').toUpperCase() : ''
     }
@@ -270,7 +330,7 @@ export const civiclensApi = {
 
     const depts = this.getDepartments();
     const targetDept = depts.find(d => d.name.toLowerCase().includes(complaint.category.toLowerCase()) || complaint.category.toLowerCase().includes(d.name.toLowerCase()));
-    if (targetDept) {
+    if (targetDept && initialStatus === 'OPEN') {
       targetDept.activeIssues += 1;
       localStorage.setItem('civiclens_departments', JSON.stringify(depts));
     }
@@ -344,5 +404,258 @@ export const civiclensApi = {
       resolved,
       slaComplianceRate: `${Math.max(90, Math.min(99, 90 + (rate / 10)))}%`
     }
+  },
+
+  // ── AI Verification Queue APIs ───────────────────────────────────────────
+  async getVerifications(): Promise<ComplaintVerification[]> {
+    try {
+      const { data, error } = await supabase
+        .from('complaint_verifications')
+        .select('*');
+      if (error) {
+        console.error('Error fetching verifications:', error.message);
+        const local = localStorage.getItem('civiclens_verifications');
+        return local ? JSON.parse(local) : [];
+      }
+      return data || [];
+    } catch (e) {
+      const local = localStorage.getItem('civiclens_verifications');
+      return local ? JSON.parse(local) : [];
+    }
+  },
+
+  async getVerificationForComplaint(complaintId: string): Promise<ComplaintVerification | null> {
+    try {
+      const { data, error } = await supabase
+        .from('complaint_verifications')
+        .select('*')
+        .eq('complaintId', complaintId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching single verification:', error.message);
+        const local = localStorage.getItem('civiclens_verifications');
+        const list = local ? JSON.parse(local) : [];
+        return list.find((v: any) => v.complaintId === complaintId) || null;
+      }
+      if (data) return data;
+      const local = localStorage.getItem('civiclens_verifications');
+      const list = local ? JSON.parse(local) : [];
+      return list.find((v: any) => v.complaintId === complaintId) || null;
+    } catch (e) {
+      const local = localStorage.getItem('civiclens_verifications');
+      const list = local ? JSON.parse(local) : [];
+      return list.find((v: any) => v.complaintId === complaintId) || null;
+    }
+  },
+
+  async saveVerification(verification: ComplaintVerification): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('complaint_verifications')
+        .insert(verification);
+      if (error) {
+        console.error('Error inserting verification:', error.message);
+      }
+    } catch (e) {
+      console.error('Supabase verification save failed:', e);
+    }
+    const local = localStorage.getItem('civiclens_verifications');
+    const list = local ? JSON.parse(local) : [];
+    list.push(verification);
+    localStorage.setItem('civiclens_verifications', JSON.stringify(list));
+  },
+
+  async updateVerification(complaintId: string, updates: Partial<ComplaintVerification>): Promise<void> {
+    try {
+      const { error } = await supabase
+        .from('complaint_verifications')
+        .update(updates)
+        .eq('complaintId', complaintId);
+      if (error) {
+        console.error('Error updating verification:', error.message);
+      }
+    } catch (e) {
+      console.error('Supabase verification update failed:', e);
+    }
+    const local = localStorage.getItem('civiclens_verifications');
+    if (local) {
+      const list = JSON.parse(local);
+      const idx = list.findIndex((v: any) => v.complaintId === complaintId);
+      if (idx !== -1) {
+        list[idx] = { ...list[idx], ...updates };
+        localStorage.setItem('civiclens_verifications', JSON.stringify(list));
+      }
+    }
+  },
+
+  async verifyComplaintEvidence(
+    complaintId: string,
+    category: string,
+    description: string,
+    photoUrl: string,
+    pinnedLat?: number,
+    pinnedLng?: number,
+    deviceLat?: number,
+    deviceLng?: number,
+    capturedAt?: string
+  ): Promise<ComplaintVerification> {
+    // 1. Run AI Vision Auditor
+    let aiRes;
+    try {
+      aiRes = await runVisionCheckAgent(photoUrl, description, category);
+    } catch (e) {
+      console.error('AI verification failed, falling back:', e);
+      aiRes = {
+        detectedIssue: category.toLowerCase().split(' ')[0] || "civic issue",
+        isMatch: true,
+        matchPercentage: Math.round(VERIFICATION_CONFIG.AI_API_FALLBACK_CONFIDENCE * 100),
+        explanation: "Verification service temporarily offline. Scheduled for manual check.",
+        riskLevel: "MEDIUM" as const
+      };
+    }
+
+    // 2. Validate GPS coordinates (Pinned Map Location vs Device Captured Location)
+    let gpsVerified: 'PASSED' | 'SUSPICIOUS' | 'UNAVAILABLE' = 'UNAVAILABLE';
+    let gpsDistance = 0;
+    if (pinnedLat && pinnedLng && deviceLat && deviceLng) {
+      gpsDistance = getOrthoDistanceKm(pinnedLat, pinnedLng, deviceLat, deviceLng);
+      if (gpsDistance <= VERIFICATION_CONFIG.ACCEPTABLE_GPS_DISTANCE_KM) {
+        gpsVerified = 'PASSED';
+      } else {
+        gpsVerified = 'SUSPICIOUS';
+      }
+    }
+
+    // 3. Validate capture timestamp
+    let timestampVerified = true;
+    if (capturedAt) {
+      const captureTime = new Date(capturedAt).getTime();
+      const now = Date.now();
+      const hoursDiff = (now - captureTime) / (1000 * 60 * 60);
+      if (hoursDiff < -1 || hoursDiff > 24) {
+        timestampVerified = false;
+      }
+    }
+
+    // 4. Check for duplicate complaints
+    let isDuplicate = false;
+    try {
+      const allComplaints = await this.getComplaints();
+      const duplicates = allComplaints.filter(c => {
+        if (c.id === complaintId || c.status === 'RESOLVED' || c.status === 'REJECTED') return false;
+        if (c.category !== category) return false;
+        if (c.latitude && c.longitude && pinnedLat && pinnedLng) {
+          const dist = getOrthoDistanceKm(c.latitude, c.longitude, pinnedLat, pinnedLng);
+          return dist < 0.5; // within 500m
+        }
+        return false;
+      });
+      isDuplicate = duplicates.length > 0;
+    } catch (e) {
+      console.error("Duplicate check failed:", e);
+    }
+
+    // 5. Calculate overall risk level
+    let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+    let verificationReason = aiRes.explanation;
+
+    if (!aiRes.isMatch || aiRes.matchPercentage < VERIFICATION_CONFIG.CONFIDENCE_LOW_THRESHOLD * 100) {
+      riskLevel = 'HIGH';
+      verificationReason = `AI match check failed: ${aiRes.explanation}`;
+    } else if (gpsVerified === 'SUSPICIOUS' && gpsDistance > 5.0) {
+      riskLevel = 'HIGH';
+      verificationReason = `Severe location mismatch: Reported and actual camera coordinates are ${gpsDistance.toFixed(1)} km apart.`;
+    } else if (aiRes.matchPercentage < VERIFICATION_CONFIG.CONFIDENCE_HIGH_THRESHOLD * 100) {
+      riskLevel = 'MEDIUM';
+      verificationReason = `Moderate AI confidence (${aiRes.matchPercentage}%): ${aiRes.explanation}`;
+    } else if (gpsVerified === 'SUSPICIOUS') {
+      riskLevel = 'MEDIUM';
+      verificationReason = `GPS location mismatch: Reported and camera coordinates are ${gpsDistance.toFixed(1)} km apart.`;
+    } else if (!timestampVerified) {
+      riskLevel = 'MEDIUM';
+      verificationReason = "Image capture timestamp is invalid or older than 24 hours.";
+    } else if (isDuplicate) {
+      riskLevel = 'MEDIUM';
+      verificationReason = "Potential duplicate: another active complaint of the same type exists nearby.";
+    }
+
+    // 6. Create verification record
+    const verification: ComplaintVerification = {
+      id: `VR-${Math.floor(1000 + Math.random() * 9000)}`,
+      complaintId,
+      imageUrl: photoUrl,
+      detectedCategory: aiRes.detectedIssue,
+      selectedCategory: category,
+      imageConfidence: aiRes.matchPercentage / 100,
+      imageMatch: aiRes.isMatch,
+      gpsVerified,
+      gpsDistance,
+      timestampVerified,
+      riskLevel,
+      verificationStatus: 'PENDING',
+      verificationReason,
+      createdAt: new Date().toISOString()
+    };
+
+    await this.saveVerification(verification);
+    return verification;
+  },
+
+  async acceptComplaint(id: string, officerName: string): Promise<Complaint[]> {
+    const complaints = await this.getComplaints();
+    const complaint = complaints.find(c => c.id === id);
+    if (complaint && complaint.status === 'PENDING_VERIFICATION') {
+      await this.updateComplaint(id, { status: 'OPEN', slaRemaining: '23h 59m left' });
+      const depts = this.getDepartments();
+      const targetDept = depts.find(d => d.name.toLowerCase().includes(complaint.category.toLowerCase()) || complaint.category.toLowerCase().includes(d.name.toLowerCase()));
+      if (targetDept) {
+        targetDept.activeIssues += 1;
+        localStorage.setItem('civiclens_departments', JSON.stringify(depts));
+      }
+      await this.updateVerification(id, {
+        verificationStatus: 'VERIFIED',
+        verifiedBy: officerName,
+        verifiedAt: new Date().toISOString()
+      });
+    }
+    return this.getComplaints();
+  },
+
+  async rejectComplaint(id: string, officerName: string, reason: string): Promise<Complaint[]> {
+    const complaints = await this.getComplaints();
+    const complaint = complaints.find(c => c.id === id);
+    if (complaint) {
+      await this.updateComplaint(id, { status: 'REJECTED', slaRemaining: 'Rejected' });
+      if (complaint.status === 'OPEN') {
+        const depts = this.getDepartments();
+        const targetDept = depts.find(d => d.name.toLowerCase().includes(complaint.category.toLowerCase()) || complaint.category.toLowerCase().includes(d.name.toLowerCase()));
+        if (targetDept) {
+          targetDept.activeIssues = Math.max(0, targetDept.activeIssues - 1);
+          localStorage.setItem('civiclens_departments', JSON.stringify(depts));
+        }
+      }
+      await this.updateVerification(id, {
+        verificationStatus: 'REJECTED',
+        verificationReason: reason,
+        verifiedBy: officerName,
+        verifiedAt: new Date().toISOString()
+      });
+    }
+    return this.getComplaints();
+  },
+
+  async requestMoreInfo(id: string, officerName: string): Promise<Complaint[]> {
+    const complaints = await this.getComplaints();
+    const complaint = complaints.find(c => c.id === id);
+    if (complaint) {
+      await this.updateVerification(id, {
+        verificationStatus: 'PENDING',
+        verificationReason: 'Officer requested additional information or higher-quality evidence.',
+        verifiedBy: officerName,
+        verifiedAt: new Date().toISOString()
+      });
+    }
+    return this.getComplaints();
   }
 }

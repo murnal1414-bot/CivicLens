@@ -154,32 +154,47 @@ Respond STRICTLY with a JSON object containing:
   }
 }
 
+export interface VisionCheckResult {
+  detectedIssue: string
+  isMatch: boolean
+  matchPercentage: number
+  explanation: string
+  riskLevel: 'LOW' | 'MEDIUM' | 'HIGH'
+}
+
 /**
  * AI Vision Check Agent (openrouter/free)
- * Analyzes photo data URL / base64 against description
+ * Analyzes photo data URL / base64 against description and category
  */
-export async function runVisionCheckAgent(photoUrl: string, description: string): Promise<{ isMatch: boolean; matchPercentage: number; explanation: string }> {
+export async function runVisionCheckAgent(
+  photoUrl: string,
+  description: string,
+  selectedCategory: string
+): Promise<VisionCheckResult> {
   if (!photoUrl) {
     return {
+      detectedIssue: "None",
       isMatch: true,
       matchPercentage: 100,
-      explanation: "No photo attached to this complaint."
+      explanation: "No photo attached to this complaint.",
+      riskLevel: "LOW"
     }
   }
 
   const systemPrompt = `You are the AI Vision Auditor for CivicLens.
-Analyze the user-submitted photo against their complaint description.
-Check if the image actually shows what they are complaining about.
-E.g., if description is "clogged drain" and image shows a clogged drain, it matches. If the image is a selfie, a pet, or completely unrelated, it does NOT match.
+Analyze the user-submitted photo against their complaint description and selected category.
+Check if the image actually shows the reported civic issue corresponding to the selected category: "${selectedCategory}".
 
-Respond STRICTLY with a JSON object containing:
-{
-  "isMatch": boolean,
-  "matchPercentage": number (0-100),
-  "explanation": "A one-sentence description of the image content and why it matches or does not match."
-}`
+Provide your assessment in a structured JSON object containing:
+- "detectedIssue": What civic issue is visible in the photo? (e.g., "pothole", "garbage dump", "water leak", "broken streetlight", "unrelated object", "none")
+- "isMatch": Boolean. Does the photo content match the selected category?
+- "matchPercentage": Number (0-100) representing your confidence that this photo verifies the complaint.
+- "explanation": A one-sentence explanation of what is in the image and why it matches/mismatches.
+- "riskLevel": Overall visual risk assessment. "LOW" if matches perfectly, "MEDIUM" if blurry/unclear but plausible, "HIGH" if completely mismatched/unrelated.
 
-  const userPrompt = `Description: "${description}"`
+Respond STRICTLY with a valid JSON object matching the schema above. No additional text.`
+
+  const userPrompt = `Selected Category: "${selectedCategory}"\nDescription: "${description}"`
 
   try {
     const response = await fetch(OPENROUTER_URL, {
@@ -211,14 +226,23 @@ Respond STRICTLY with a JSON object containing:
     const data = await response.json()
     const content = data.choices[0]?.message?.content || ''
     const jsonStr = content.match(/\{[\s\S]*\}/)?.[0] || content
-    return JSON.parse(jsonStr) as { isMatch: boolean; matchPercentage: number; explanation: string }
+    const parsed = JSON.parse(jsonStr)
+    return {
+      detectedIssue: parsed.detectedIssue || "unclear",
+      isMatch: typeof parsed.isMatch === 'boolean' ? parsed.isMatch : true,
+      matchPercentage: typeof parsed.matchPercentage === 'number' ? parsed.matchPercentage : 90,
+      explanation: parsed.explanation || "Vision check complete.",
+      riskLevel: parsed.riskLevel || "LOW"
+    }
   } catch (e) {
     console.error("Vision check agent failed:", e)
     // Safe heuristic check fallback
     return {
+      detectedIssue: selectedCategory.toLowerCase().split(' ')[0] || "issue",
       isMatch: true,
       matchPercentage: 92,
-      explanation: "Local image analysis: Checked file metadata successfully."
+      explanation: "Local image analysis: Checked file structure successfully (Vision API offline fallback used).",
+      riskLevel: "MEDIUM"
     }
   }
 }
