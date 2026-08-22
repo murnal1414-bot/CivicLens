@@ -1,18 +1,7 @@
 import { useState } from 'react'
 import GovSidebar from '../components/GovSidebar'
-
-type Priority = 'CRITICAL' | 'HIGH' | 'MEDIUM'
-type Complaint = {
-  id: string; date: string; category: string; categoryIcon: string
-  location: string; density: 'High' | 'Med' | 'Low'; priority: Priority
-  slaRemaining: string; slaTotal: string; assignee: string; initials: string
-}
-
-const complaints: Complaint[] = [
-  { id: '#G-4092-W', date: 'Oct 24, 09:12 AM', category: 'Broken Water Pipe', categoryIcon: 'water_drop', location: 'Vijay Nagar, Sec 54', density: 'High', priority: 'CRITICAL', slaRemaining: '1h 14m left', slaTotal: 'Limit: 4 hours', assignee: 'A. Sharma', initials: 'AS' },
-  { id: '#G-4091-R', date: 'Oct 24, 08:45 AM', category: 'Deep Pothole', categoryIcon: 'add_road', location: 'Palasia Square', density: 'Med', priority: 'HIGH', slaRemaining: '14h 20m left', slaTotal: 'Limit: 24 hours', assignee: 'R. Mehta', initials: 'RM' },
-  { id: '#G-4088-S', date: 'Oct 23, 11:30 PM', category: 'Streetlight Out', categoryIcon: 'lightbulb', location: 'Bhawarkuan', density: 'Low', priority: 'MEDIUM', slaRemaining: '32h 10m left', slaTotal: 'Limit: 48 hours', assignee: '', initials: '' },
-]
+import { civiclensApi } from '../services/api'
+import type { Complaint } from '../services/api'
 
 const priorityConfig = {
   CRITICAL: { label: 'CRITICAL', icon: 'warning', cls: 'badge-critical' },
@@ -33,8 +22,50 @@ const slaColor = {
 }
 
 export default function GovComplaintsPage() {
-  const [selectedId, setSelected] = useState<string | null>('#G-4092-W')
+  const [complaints, setComplaints] = useState<Complaint[]>(() => civiclensApi.getComplaints())
+  const [selectedId, setSelected] = useState<string | null>(complaints[0]?.id || null)
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedDept, setSelectedDept] = useState('All Departments')
+  const [sortBy, setSortBy] = useState('Sort by Priority')
+
   const selected = complaints.find(c => c.id === selectedId)
+
+  // Handle assigning/resolving complaints
+  const handleAssign = (id: string, name: string) => {
+    const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
+    const updated = civiclensApi.updateComplaint(id, { 
+      status: 'ASSIGNED', 
+      assignee: name, 
+      initials 
+    })
+    setComplaints(updated)
+  }
+
+  const handleResolve = (id: string) => {
+    const updated = civiclensApi.updateComplaint(id, { 
+      status: 'RESOLVED',
+      slaRemaining: 'Resolved on time'
+    })
+    setComplaints(updated)
+  }
+
+  // Filter complaints list
+  let filtered = complaints.filter(c => {
+    const matchesSearch = c.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.location.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          c.description.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesDept = selectedDept === 'All Departments' || c.category === selectedDept
+    return matchesSearch && matchesDept
+  })
+
+  // Sort complaints
+  if (sortBy === 'Sort by Priority') {
+    const priorityWeight = { CRITICAL: 3, HIGH: 2, MEDIUM: 1 }
+    filtered.sort((a, b) => priorityWeight[b.priority] - priorityWeight[a.priority])
+  } else if (sortBy === 'Sort by Date') {
+    filtered.sort((a, b) => b.date.localeCompare(a.date))
+  }
 
   return (
     <div className="dark flex min-h-screen bg-background text-sm">
@@ -44,9 +75,15 @@ export default function GovComplaintsPage() {
         
         {/* Top Header */}
         <header className="fixed top-0 left-60 right-0 h-14 bg-background/80 backdrop-blur-3xl z-40 px-6 flex items-center justify-between border-b border-white/[0.06]">
-          <div className="flex items-center gap-2 text-on-surface-variant">
+          <div className="flex items-center gap-2 text-on-surface-variant flex-1 max-w-xs">
             <span className="material-symbols-outlined text-[18px]">search</span>
-            <span className="text-xs">Search reports, officers, or places...</span>
+            <input
+              type="text"
+              placeholder="Search reports..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="bg-transparent border-none text-xs text-white focus:outline-none w-full placeholder-on-surface-variant/50"
+            />
           </div>
           <div className="flex items-center gap-4">
             <div className="relative flex items-center justify-center w-8 h-8 rounded-full hover:bg-surface-container transition-colors cursor-pointer">
@@ -75,36 +112,39 @@ export default function GovComplaintsPage() {
                 <h2 className="text-lg font-semibold text-primary tracking-tight">Active Reports</h2>
                 <div className="px-2.5 py-0.5 rounded-full bg-surface-container-high border border-white/5 flex items-center gap-1.5">
                   <span className="w-1.5 h-1.5 rounded-full bg-error animate-pulse" />
-                  <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">14 Overdue Issues</span>
+                  <span className="text-[10px] text-on-surface-variant uppercase tracking-widest font-semibold">{filtered.length} Open Issues</span>
                 </div>
               </div>
               
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Department filter */}
                 <div className="relative text-xs">
-                  <select className="appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer hover:bg-surface-container">
+                  <select 
+                    value={selectedDept}
+                    onChange={(e) => setSelectedDept(e.target.value)}
+                    className="appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer hover:bg-surface-container"
+                  >
                     <option>All Departments</option>
-                    <option>Water &amp; Drainage</option>
-                    <option>Roads &amp; Transport</option>
-                    <option>Sanitation &amp; Waste</option>
+                    <option>Water Supply</option>
+                    <option>Drainage &amp; Sewerage</option>
+                    <option>Health &amp; Sanitation</option>
                     <option>Streetlights</option>
+                    <option>Roads &amp; Public Works</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
                 </div>
                 {/* Sort */}
                 <div className="relative text-xs">
-                  <select className="appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer hover:bg-surface-container">
+                  <select 
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-1.5 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer hover:bg-surface-container"
+                  >
                     <option>Sort by Priority</option>
-                    <option>Sort by Time Left</option>
                     <option>Sort by Date</option>
-                    <option>Sort by Density</option>
                   </select>
                   <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
                 </div>
-                <button className="bg-primary text-on-primary text-xs font-semibold px-4 py-1.5 rounded-lg hover:bg-primary/95 transition-all flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px]">add</span>
-                  Add Report
-                </button>
               </div>
             </div>
 
@@ -123,7 +163,7 @@ export default function GovComplaintsPage() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-white/[0.04]">
-                      {complaints.map((c) => {
+                      {filtered.map((c) => {
                         const p = priorityConfig[c.priority]
                         const isSelected = selectedId === c.id
                         return (
@@ -236,13 +276,13 @@ export default function GovComplaintsPage() {
                         </div>
                         <div className="relative w-full h-32 rounded-lg overflow-hidden border border-white/10">
                           <div
-                            className="absolute inset-0 bg-cover bg-center"
-                            style={{ backgroundImage: `url('https://lh3.googleusercontent.com/aida-public/AB6AXuCEcXRkud4uZsDQVo8Xtgnbjs0S8j4AxRJb9DFT7sVywluabp_NlW7EjZEmM-7_EHkBJA0CaduQKNQ1VcfwvQMT9qKaLoh6hgZZNAfNu7DGf3mK6b3uJqAtTZr2H30cixOOZO6t-jNBT4uQ1xCz1_amVpOIX4lB8KCK7ddGQ1KMpFAW8OTbuNmQi7bq7dAoHShNE8i3Ib0IVzi4W_6re30rGFSRzYV-rh9yzsWJ89nZ9pE7dNFbNcWg')` }}
+                            className="absolute inset-0 bg-cover bg-center bg-neutral-900"
+                            style={{ backgroundImage: `url('${selected.photoUrl || 'https://images.unsplash.com/photo-1542060748-10c28b629f6f?auto=format&fit=crop&w=400&q=80'}')` }}
                           />
                           <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/20 to-transparent" />
-                          <div className="absolute bottom-2.5 left-2.5">
-                            <span className="text-[9px] text-on-surface bg-surface-container/80 backdrop-blur px-1.5 py-0.5 rounded uppercase mb-1 block w-max">Detected: Infrastructure issue</span>
-                            <span className="text-xs font-semibold text-primary block leading-none">Severe Water Leak</span>
+                          <div className="absolute bottom-2.5 left-2.5 right-2.5">
+                            <span className="text-[9px] text-on-surface bg-surface-container/80 backdrop-blur px-1.5 py-0.5 rounded uppercase mb-1 block w-max">Category: {selected.category}</span>
+                            <span className="text-xs font-semibold text-primary block leading-tight truncate">{selected.description || 'No description provided.'}</span>
                           </div>
                         </div>
                       </div>
@@ -251,45 +291,48 @@ export default function GovComplaintsPage() {
                       <div className="grid grid-cols-2 gap-2.5">
                         <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col justify-between h-16">
                           <span className="text-[10px] text-on-surface-variant uppercase">AI Priority</span>
-                          <span className="text-sm font-semibold text-error leading-none">Critical</span>
+                          <span className="text-xs font-semibold text-error leading-none">{selected.priority}</span>
                         </div>
                         <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 flex flex-col justify-between h-16">
-                          <span className="text-[10px] text-on-surface-variant uppercase">Expected Fix</span>
-                          <span className="text-sm font-semibold text-primary leading-none">3.5 hours</span>
+                          <span className="text-[10px] text-on-surface-variant uppercase">SLA Limit</span>
+                          <span className="text-xs font-semibold text-primary leading-none">{selected.slaTotal.split(':')[1]?.trim() || selected.slaTotal}</span>
                         </div>
                       </div>
 
                       {/* Similar reports */}
                       <div className="flex flex-col gap-2">
                         <div className="flex items-center justify-between text-xs">
-                          <span className="text-on-surface-variant font-medium">Similar Reports</span>
-                          <span className="text-secondary font-medium">3 found</span>
+                          <span className="text-on-surface-variant font-medium">Description Details</span>
                         </div>
-                        <div className="bg-surface-container-lowest rounded-lg border border-white/5 divide-y divide-white/5">
-                          {[{ id: '#G-4089-W', time: '12m ago', match: '92% match' }, { id: '#G-4085-W', time: '45m ago', match: '85% match' }].map(d => (
-                            <div key={d.id} className="p-2.5 flex items-center justify-between text-xs hover:bg-surface-container transition-colors">
-                              <div className="flex flex-col">
-                                <span className="font-semibold text-primary">{d.id}</span>
-                                <span className="text-[10px] text-on-surface-variant">Reported {d.time}</span>
-                              </div>
-                              <span className="text-[10px] text-secondary font-medium">{d.match}</span>
-                            </div>
-                          ))}
+                        <div className="bg-surface-container-lowest p-3 rounded-lg border border-white/5 text-xs text-on-surface-variant leading-relaxed">
+                          {selected.description}
                         </div>
-                        <button className="w-full py-1.5 bg-surface-container border border-white/10 rounded-lg text-xs font-semibold text-primary hover:bg-surface-container-high transition-colors">
-                          Group Together (3)
-                        </button>
                       </div>
                     </div>
 
                     {/* Actions */}
                     <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-white/[0.06]">
-                      <button className="w-full py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 transition-all">
-                        Send Repair Crew
-                      </button>
-                      <button className="w-full py-2 bg-transparent border border-white/20 text-primary text-xs font-semibold rounded-lg hover:bg-surface-container transition-all">
-                        Change Worker
-                      </button>
+                      {selected.status === 'OPEN' && (
+                        <button 
+                          onClick={() => handleAssign(selected.id, 'R. Verma')}
+                          className="w-full py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 transition-all"
+                        >
+                          Assign Crew (R. Verma)
+                        </button>
+                      )}
+                      {selected.status === 'ASSIGNED' && (
+                        <button 
+                          onClick={() => handleResolve(selected.id)}
+                          className="w-full py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-500 transition-all"
+                        >
+                          Mark as Resolved
+                        </button>
+                      )}
+                      {selected.status === 'RESOLVED' && (
+                        <div className="w-full py-2 bg-surface-container-high/40 text-center text-xs text-green-500 font-semibold rounded-lg border border-green-500/20">
+                          Status: Resolved
+                        </div>
+                      )}
                     </div>
 
                   </div>

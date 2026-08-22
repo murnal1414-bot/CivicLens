@@ -1,19 +1,6 @@
 import { Link } from 'react-router-dom'
 import GovSidebar from '../components/GovSidebar'
-
-const kpis = [
-  { icon: 'forum',           label: 'Total Complaints',   value: '14,284', trend: '+12%', trendUp: true,  accent: 'primary',   bar: 70 },
-  { icon: 'pending_actions', label: 'Still Open',         value: '3,492',  trend: '+4%',  trendUp: false, accent: 'secondary', bar: 25 },
-  { icon: 'verified',        label: 'Fixed On Time',      value: '92.4%',  trend: '+2.5%',trendUp: true,  accent: 'primary',   bar: 92 },
-]
-
-const depts = [
-  { label: 'Health', pct: 85, color: 'bg-primary',   pts: '4,210' },
-  { label: 'Water',  pct: 65, color: 'bg-secondary', pts: '3,105' },
-  { label: 'Power',  pct: 40, color: 'bg-outline',   pts: '1,890' },
-  { label: 'Roads',  pct: 25, color: 'bg-outline',   pts: '940' },
-  { label: 'Parks',  pct: 15, color: 'bg-outline',   pts: '420' },
-]
+import { civiclensApi } from '../services/api'
 
 const activity = [
   { icon: 'check_circle',    color: 'primary', title: 'Extended deadline', time: '10m ago', desc: 'Approved extra time for Complaint #4928-A due to bad weather in Zone 2.' },
@@ -22,6 +9,22 @@ const activity = [
 ]
 
 export default function GovOverviewPage() {
+  const stats = civiclensApi.getKpis()
+  const departments = civiclensApi.getDepartments().slice(0, 5)
+
+  const kpis = [
+    { icon: 'forum',           label: 'Total Complaints',   value: stats.total.toString(), trend: '+12%', trendUp: true,  accent: 'primary',   bar: 70 },
+    { icon: 'pending_actions', label: 'Still Open',         value: stats.open.toString(),  trend: '+4%',  trendUp: false, accent: 'secondary', bar: Math.round((stats.open / Math.max(1, stats.total)) * 100) },
+    { icon: 'verified',        label: 'Fixed On Time',      value: stats.slaComplianceRate,  trend: '+2.5%',trendUp: true,  accent: 'primary',   bar: parseInt(stats.slaComplianceRate) || 92 },
+  ]
+
+  const maxIssues = Math.max(1, ...departments.map(d => d.activeIssues))
+  const depts = departments.map(d => ({
+    label: d.name.split(' ')[0] || d.name,
+    pct: Math.round((d.activeIssues / maxIssues) * 100),
+    color: d.activeIssues > 40 ? 'bg-primary' : 'bg-secondary',
+    pts: d.activeIssues.toString()
+  }))
   return (
     <div className="dark flex min-h-screen bg-background text-sm">
       <GovSidebar />

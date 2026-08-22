@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import GovSidebar from '../components/GovSidebar'
+import { civiclensApi } from '../services/api'
 
 const depts = [
   { label: 'Solid Waste Mgmt', pct: 98, color: 'bg-primary',   count: '420 active', status: '98% on time', statusColor: 'text-[#4ade80]' },
@@ -14,6 +15,11 @@ const workers = [
 ]
 
 export default function GovAnalyticsPage() {
+  const stats = civiclensApi.getKpis()
+  const departments = civiclensApi.getDepartments()
+  const totalWorkers = departments.reduce((sum, d) => sum + d.workersCount, 0)
+  const activeIssues = stats.open
+
   const [deptFilter, setDeptFilter] = useState('Health & Sanitation')
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('month')
 
@@ -100,28 +106,27 @@ export default function GovAnalyticsPage() {
                 <span className="material-symbols-outlined text-primary/80 text-[18px]">group</span>
               </div>
               <div className="flex items-end gap-2">
-                <span className="text-2xl font-semibold text-primary leading-none">1,248</span>
+                <span className="text-2xl font-semibold text-primary leading-none">{totalWorkers}</span>
                 <span className="text-[10px] text-green-400 font-medium bg-green-500/10 px-1.5 py-0.5 rounded flex items-center mb-1"><span className="material-symbols-outlined text-[12px]">arrow_upward</span> 12%</span>
               </div>
               <div className="mt-3 flex justify-between text-[10px] text-on-surface-variant/60 border-t border-white/5 pt-2">
-                <span>Field: 980</span>
-                <span>Office: 268</span>
+                <span>Field: {Math.round(totalWorkers * 0.78)}</span>
+                <span>Office: {Math.round(totalWorkers * 0.22)}</span>
               </div>
             </div>
 
             {/* Average Dispatch Time */}
             <div className="kpi-card">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">Avg Dispatch</span>
+                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider">Active Issues</span>
                 <span className="material-symbols-outlined text-primary/80 text-[18px]">timer</span>
               </div>
               <div className="flex items-end gap-1">
-                <span className="text-2xl font-semibold text-primary leading-none">14</span>
-                <span className="text-xs text-on-surface-variant mb-0.5">mins</span>
-                <span className="text-[10px] text-green-400 font-medium bg-green-500/10 px-1.5 py-0.5 rounded flex items-center mb-1 ml-1"><span className="material-symbols-outlined text-[12px]">arrow_downward</span> 2m</span>
+                <span className="text-2xl font-semibold text-primary leading-none">{activeIssues}</span>
+                <span className="text-xs text-on-surface-variant mb-0.5">issues</span>
               </div>
               <div className="mt-4 w-full bg-surface-container-highest h-1 rounded-full overflow-hidden">
-                <div className="bg-primary h-full w-[85%]" />
+                <div className="bg-primary h-full w-[60%]" />
               </div>
             </div>
 

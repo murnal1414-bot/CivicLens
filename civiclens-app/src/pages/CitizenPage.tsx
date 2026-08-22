@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { civiclensApi } from '../services/api'
 
 const SUBCATS: Record<string, string[]> = {
   water:      ['Water leaking from pipe', 'No water supply', 'Low water pressure', 'Dirty water'],
@@ -24,10 +25,6 @@ const AI_HINTS: Record<string, string> = {
   fire:       '→ Fire Department · Priority: CRITICAL · Immediate action initiated',
   revenue:    '→ Revenue Department · Priority: Low · Expected: 5–7 business days',
   housing:    '→ Housing Department · Priority: Medium · Expected fix: within 72 hours',
-}
-
-function generateId() {
-  return 'CL-' + Math.random().toString(36).substr(2, 5).toUpperCase() + '-' + Date.now().toString().slice(-4)
 }
 
 export default function CitizenPage() {
@@ -68,7 +65,46 @@ export default function CitizenPage() {
   const submit = () => {
     if (!text.trim()) { setError('Please describe the problem before submitting.'); return }
     setError('')
-    setTracking(generateId())
+    
+    // Map selected dept key to official department names
+    const categoryMapping: Record<string, string> = {
+      water: 'Water Supply',
+      drainage: 'Drainage & Sewerage',
+      sanitation: 'Health & Sanitation',
+      electrical: 'Electrical & Mechanical',
+      roads: 'Roads & Public Works',
+      parks: 'Parks & Gardens',
+      fire: 'Fire Safety',
+      revenue: 'Revenue',
+      housing: 'Housing & Environment',
+    }
+
+    const categoryName = categoryMapping[dept] || 'General Administration'
+    const categoryIconMapping: Record<string, string> = {
+      water: 'water_drop',
+      drainage: 'waves',
+      sanitation: 'delete_forever',
+      electrical: 'lightbulb',
+      roads: 'add_road',
+      parks: 'forest',
+      fire: 'local_fire_department',
+      revenue: 'payments',
+      housing: 'apartment',
+    }
+    const categoryIcon = categoryIconMapping[dept] || 'balance'
+
+    const newTicket = civiclensApi.addComplaint({
+      category: categoryName,
+      categoryIcon,
+      location: address || 'Vijay Nagar, Indore',
+      density: 'Med',
+      priority: dept === 'fire' ? 'CRITICAL' : 'MEDIUM',
+      description: text,
+      photoUrl: previews[0] || '',
+      assignee: '',
+    })
+
+    setTracking(newTicket.id)
     setModal(true)
   }
 

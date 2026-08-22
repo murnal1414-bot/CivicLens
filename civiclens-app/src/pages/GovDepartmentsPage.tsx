@@ -1,47 +1,19 @@
 import { useState } from 'react'
 import GovSidebar from '../components/GovSidebar'
-
-type Department = {
-  id: string
-  name: string
-  icon: string
-  activeIssues: number
-  workersCount: number
-  status: 'Active' | 'Under Review'
-  avgFixTime: string
-  onTimeRate: number
-}
-
-const initialDepartments: Department[] = [
-  { id: 'DEPT-01', name: 'Water Supply', icon: 'water_drop', activeIssues: 28, workersCount: 42, status: 'Active', avgFixTime: '2.5h', onTimeRate: 98 },
-  { id: 'DEPT-02', name: 'Drainage & Sewerage', icon: 'waves', activeIssues: 45, workersCount: 35, status: 'Active', avgFixTime: '4.1h', onTimeRate: 82 },
-  { id: 'DEPT-03', name: 'Health & Sanitation', icon: 'delete_forever', activeIssues: 82, workersCount: 120, status: 'Active', avgFixTime: '1.8h', onTimeRate: 96 },
-  { id: 'DEPT-04', name: 'Streetlights', icon: 'lightbulb', activeIssues: 19, workersCount: 22, status: 'Active', avgFixTime: '6.2h', onTimeRate: 88 },
-  { id: 'DEPT-05', name: 'Roads & Public Works', icon: 'add_road', activeIssues: 64, workersCount: 85, status: 'Active', avgFixTime: '12h', onTimeRate: 75 },
-  { id: 'DEPT-06', name: 'Parks & Gardens', icon: 'forest', activeIssues: 12, workersCount: 14, status: 'Active', avgFixTime: '18h', onTimeRate: 90 },
-  { id: 'DEPT-07', name: 'Fire Safety', icon: 'local_fire_department', activeIssues: 3, workersCount: 50, status: 'Active', avgFixTime: '0.4h', onTimeRate: 100 },
-  { id: 'DEPT-08', name: 'Revenue', icon: 'payments', activeIssues: 7, workersCount: 10, status: 'Active', avgFixTime: '24h', onTimeRate: 95 },
-  { id: 'DEPT-09', name: 'IT Services', icon: 'computer', activeIssues: 4, workersCount: 8, status: 'Active', avgFixTime: '1.2h', onTimeRate: 98 },
-  { id: 'DEPT-10', name: 'Housing & Environment', icon: 'apartment', activeIssues: 15, workersCount: 18, status: 'Under Review', avgFixTime: '36h', onTimeRate: 70 },
-  { id: 'DEPT-11', name: 'Food & Supplies', icon: 'shopping_bag', activeIssues: 2, workersCount: 6, status: 'Active', avgFixTime: '8h', onTimeRate: 92 },
-  { id: 'DEPT-12', name: 'Education', icon: 'school', activeIssues: 5, workersCount: 12, status: 'Active', avgFixTime: '15h', onTimeRate: 94 },
-  { id: 'DEPT-13', name: 'Law & Administration', icon: 'balance', activeIssues: 8, workersCount: 15, status: 'Active', avgFixTime: '72h', onTimeRate: 85 },
-]
+import { civiclensApi } from '../services/api'
+import type { Department } from '../services/api'
 
 export default function GovDepartmentsPage() {
-  const [depts, setDepts] = useState<Department[]>(initialDepartments)
+  const [depts, setDepts] = useState<Department[]>(() => civiclensApi.getDepartments())
   const [searchTerm, setSearchTerm] = useState('')
 
   const toggleStatus = (id: string) => {
-    setDepts(depts.map(d => {
-      if (d.id === id) {
-        return {
-          ...d,
-          status: d.status === 'Active' ? 'Under Review' : 'Active'
-        }
-      }
-      return d
-    }))
+    const target = depts.find(d => d.id === id)
+    if (target) {
+      const nextStatus = target.status === 'Active' ? 'Under Review' : 'Active'
+      const updated = civiclensApi.updateDepartment(id, { status: nextStatus })
+      setDepts(updated)
+    }
   }
 
   const filteredDepts = depts.filter(d => 
