@@ -49,6 +49,13 @@ export default function GovComplaintsPage() {
   const [manualDispatchTime, setManualDispatchTime] = useState('')
   const [manualSolutionTime, setManualSolutionTime] = useState('')
   const [manualPriority, setManualPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM'>('MEDIUM')
+  const [assignedSuccessDetails, setAssignedSuccessDetails] = useState<{
+    id: string
+    assignee: string
+    priority: string
+    dispatchTime: string
+    estimatedSolutionDate: string
+  } | null>(null)
 
   const [officerName, setOfficerName] = useState('Municipal Officer')
   const [officerEmail, setOfficerEmail] = useState('')
@@ -186,6 +193,65 @@ export default function GovComplaintsPage() {
     })
     setComplaints(updated)
     setWorkers(civiclensApi.getWorkers())
+    setAssignedSuccessDetails({
+      id,
+      assignee: name,
+      priority: manualPriority,
+      dispatchTime: manualDispatchTime,
+      estimatedSolutionDate: manualSolutionTime
+    })
+  }
+
+  const handleAutoFillAi = () => {
+    if (!selected) return
+
+    const deptStaff = workers.filter(
+      w => w.role === 'STAFF' && 
+      w.department.toLowerCase() === selected.category.toLowerCase()
+    )
+    const displayStaff = deptStaff.length > 0 ? deptStaff : workers.filter(w => w.role === 'STAFF')
+
+    const activeStaff = displayStaff.filter(s => s.status !== 'On Leave')
+    const bestStaff = activeStaff.length > 0 
+      ? activeStaff.reduce((prev, curr) => prev.tasksCount < curr.tasksCount ? prev : curr)
+      : displayStaff[0]
+
+    if (bestStaff) {
+      setSelectedStaffName(bestStaff.name)
+    }
+
+    const now = new Date()
+    const offset = now.getTimezoneOffset()
+    const localNow = new Date(now.getTime() - offset * 60 * 1000)
+    setManualDispatchTime(localNow.toISOString().slice(0, 16))
+
+    let hoursToAdd = 24
+
+    const slaText = reasoningData?.suggestedSla || ''
+    const hoursMatch = slaText.match(/(\d+)\s*hour/i)
+    const daysMatch = slaText.match(/(\d+)\s*day/i)
+
+    if (hoursMatch) {
+      hoursToAdd = parseInt(hoursMatch[1], 10)
+    } else if (daysMatch) {
+      hoursToAdd = parseInt(daysMatch[1], 10) * 24
+    } else {
+      const deptsListRaw = civiclensApi.getDepartments()
+      const currentDept = deptsListRaw.find(d => d.name.toLowerCase() === selected.category.toLowerCase())
+      if (currentDept?.avgFixTime) {
+        const fixText = currentDept.avgFixTime
+        const fixHoursMatch = fixText.match(/([\d.]+)\s*h/i)
+        if (fixHoursMatch) {
+          hoursToAdd = parseFloat(fixHoursMatch[1])
+        }
+      }
+    }
+
+    const solutionTime = new Date(now.getTime() + hoursToAdd * 60 * 60 * 1000)
+    const localSolution = new Date(solutionTime.getTime() - offset * 60 * 1000)
+    setManualSolutionTime(localSolution.toISOString().slice(0, 16))
+
+    setManualPriority(selected.priority)
   }
 
   const handleResolve = async (id: string) => {
@@ -737,8 +803,18 @@ export default function GovComplaintsPage() {
                                 : workers.filter(w => w.role === 'STAFF')
 
                               return (
-                                <div className="flex flex-col gap-3.5 bg-surface-container-lowest/50 p-3.5 rounded-lg border border-white/5 text-left">
-                                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Assign to Field Staff</span>
+                                 <div className="flex flex-col gap-3.5 bg-surface-container-lowest/50 p-3.5 rounded-lg border border-white/5 text-left">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Assign to Field Staff</span>
+                                    <button
+                                      type="button"
+                                      onClick={handleAutoFillAi}
+                                      className="flex items-center gap-1 text-[9px] font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-full hover:bg-primary/20 transition-all shrink-0 uppercase tracking-wider"
+                                    >
+                                      <span className="material-symbols-outlined text-[11px] animate-pulse">psychology</span>
+                                      Auto-fill with AI
+                                    </button>
+                                  </div>
                                   
                                   {/* Field Staff Selector */}
                                   <div className="flex flex-col gap-1 text-xs">
@@ -810,13 +886,31 @@ export default function GovComplaintsPage() {
                                 </div>
                               )
                             })()}
-                            {selected.status === 'ASSIGNED' && (
+                            {selected.status === 'OPEN' && (
                               <button 
-                                onClick={() => handleResolve(selected.id)}
-                                className="w-full py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-500 transition-all"
+                                onClick={() => { setTargetRejectionId(selected.id); setShowRejectionModal(true) }}
+                                className="w-full py-2 bg-error/15 border border-error/30 text-error hover:bg-error/25 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 font-semibold mt-1"
                               >
-                                Mark as Resolved
+                                <span className="material-symbols-outlined text-[15px]">cancel</span>
+                                Reject Report
                               </button>
+                            )}
+                            {selected.status === 'ASSIGNED' && (
+                              <div className="flex flex-col gap-2">
+                                <button 
+                                  onClick={() => handleResolve(selected.id)}
+                                  className="w-full py-2 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-500 transition-all"
+                                >
+                                  Mark as Resolved
+                                </button>
+                                <button 
+                                  onClick={() => { setTargetRejectionId(selected.id); setShowRejectionModal(true) }}
+                                  className="w-full py-2 bg-error/15 border border-error/30 text-error hover:bg-error/25 text-xs font-semibold rounded-lg transition-all flex items-center justify-center gap-1.5 font-semibold"
+                                >
+                                  <span className="material-symbols-outlined text-[15px]">cancel</span>
+                                  Reject Report
+                                </button>
+                              </div>
                             )}
                             {selected.status === 'RESOLVED' && (
                               <div className="w-full py-2 bg-surface-container-high/40 text-center text-xs text-green-500 font-semibold rounded-lg border border-green-500/20">
@@ -869,6 +963,65 @@ export default function GovComplaintsPage() {
                 Confirm Rejection
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Animated Assignment Success Details Modal */}
+      {assignedSuccessDetails && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4 text-sm animate-fade-in">
+          <div className="bg-surface-container border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl animate-scale-up text-center flex flex-col gap-4">
+            
+            {/* Celebration Icon */}
+            <div className="mx-auto w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 text-green-400 flex items-center justify-center animate-bounce shadow-[0_0_20px_rgba(34,197,94,0.25)]">
+              <span className="material-symbols-outlined text-[36px]">check_circle</span>
+            </div>
+
+            <div>
+              <h3 className="text-lg font-bold text-on-surface">Task Dispatched!</h3>
+              <p className="text-xs text-on-surface-variant mt-1">Complaint details have been successfully broadcast to field staff.</p>
+            </div>
+
+            {/* Summary Details Card */}
+            <div className="bg-surface-container-low border border-white/5 rounded-xl p-4 text-xs text-left flex flex-col gap-2.5">
+              <div className="flex justify-between border-b border-white/5 pb-1.5">
+                <span className="text-on-surface-variant">Ticket ID</span>
+                <span className="font-mono text-primary font-bold">{assignedSuccessDetails.id}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-1.5">
+                <span className="text-on-surface-variant">Assigned Crew</span>
+                <span className="font-semibold text-on-surface">{assignedSuccessDetails.assignee}</span>
+              </div>
+              <div className="flex justify-between border-b border-white/5 pb-1.5">
+                <span className="text-on-surface-variant">Priority Level</span>
+                <span className={`font-semibold uppercase text-[10px] ${
+                  assignedSuccessDetails.priority === 'CRITICAL' ? 'text-red-400' : assignedSuccessDetails.priority === 'HIGH' ? 'text-secondary' : 'text-primary'
+                }`}>{assignedSuccessDetails.priority}</span>
+              </div>
+              {assignedSuccessDetails.dispatchTime && (
+                <div className="flex justify-between border-b border-white/5 pb-1.5">
+                  <span className="text-on-surface-variant">Dispatch Start</span>
+                  <span className="text-on-surface font-semibold">{new Date(assignedSuccessDetails.dispatchTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              )}
+              {assignedSuccessDetails.estimatedSolutionDate && (
+                <div className="flex justify-between">
+                  <span className="text-on-surface-variant">Est. Fix Target</span>
+                  <span className="text-primary font-bold">{new Date(assignedSuccessDetails.estimatedSolutionDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                setAssignedSuccessDetails(null)
+                setSelected(null)
+              }}
+              className="w-full py-2.5 bg-primary text-on-primary font-semibold rounded-lg hover:opacity-90 transition-opacity text-xs mt-2"
+            >
+              Acknowledge & Close
+            </button>
+
           </div>
         </div>
       )}
