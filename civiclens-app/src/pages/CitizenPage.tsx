@@ -441,7 +441,7 @@ export default function CitizenPage() {
     if (!text.trim()) { setError('Please describe the problem before submitting.'); return }
     if (!dept) { setError('Please choose a category/department.'); return }
     if (previews.length === 0) {
-      submit()
+      setError('Please capture or upload an image as evidence before submitting.')
       return
     }
 
