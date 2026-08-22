@@ -36,8 +36,8 @@ export default function LoginPage() {
             await supabase.auth.signOut()
           }
         } else {
-          // Citizen flow
-          navigate('/file-complaint')
+          // Citizen flow: go to citizen dashboard
+          navigate('/citizen/dashboard')
         }
       }
     }
@@ -55,7 +55,7 @@ export default function LoginPage() {
             await supabase.auth.signOut()
           }
         } else {
-          navigate('/file-complaint')
+          navigate('/citizen/dashboard')
         }
       }
     })
@@ -109,7 +109,7 @@ export default function LoginPage() {
       setMessage('')
       // Mock login: Store phone in localStorage and redirect to citizen page
       localStorage.setItem('citizen_phone', phone.trim())
-      navigate('/file-complaint')
+      navigate('/citizen/dashboard')
     } else {
       if (!username.trim() || !password.trim()) {
         setMessage('Please enter email and password.')

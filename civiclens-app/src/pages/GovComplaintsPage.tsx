@@ -23,14 +23,25 @@ const slaColor = {
 }
 
 export default function GovComplaintsPage() {
-  const [complaints, setComplaints] = useState<Complaint[]>(() => civiclensApi.getComplaints())
-  const [selectedId, setSelected] = useState<string | null>(complaints[0]?.id || null)
+  const [complaints, setComplaints] = useState<Complaint[]>([])
+  const [selectedId, setSelected] = useState<string | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedDept, setSelectedDept] = useState('All Departments')
   const [sortBy, setSortBy] = useState('Sort by Priority')
   const [aiLoading, setAiLoading] = useState(false)
   const [analystData, setAnalystData] = useState<{ impact: string; complexity: 'Low' | 'Medium' | 'High'; complexityReason: string; steps: string[] } | null>(null)
   const [reasoningData, setReasoningData] = useState<{ safetyHazards: string; suggestedSla: string; reasoning: string } | null>(null)
+
+  useEffect(() => {
+    const load = async () => {
+      const data = await civiclensApi.getComplaints()
+      setComplaints(data)
+      if (data.length > 0 && !selectedId) {
+        setSelected(data[0].id)
+      }
+    }
+    load()
+  }, [])
 
   useEffect(() => {
     if (!selectedId) {
@@ -61,14 +72,14 @@ export default function GovComplaintsPage() {
     }
     
     runAgents()
-  }, [selectedId])
+  }, [selectedId, complaints])
 
   const selected = complaints.find(c => c.id === selectedId)
 
   // Handle assigning/resolving complaints
-  const handleAssign = (id: string, name: string) => {
+  const handleAssign = async (id: string, name: string) => {
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
-    const updated = civiclensApi.updateComplaint(id, { 
+    const updated = await civiclensApi.updateComplaint(id, { 
       status: 'ASSIGNED', 
       assignee: name, 
       initials 
@@ -76,8 +87,8 @@ export default function GovComplaintsPage() {
     setComplaints(updated)
   }
 
-  const handleResolve = (id: string) => {
-    const updated = civiclensApi.updateComplaint(id, { 
+  const handleResolve = async (id: string) => {
+    const updated = await civiclensApi.updateComplaint(id, { 
       status: 'RESOLVED',
       slaRemaining: 'Resolved on time'
     })

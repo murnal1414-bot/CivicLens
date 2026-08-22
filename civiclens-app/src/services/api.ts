@@ -1,3 +1,5 @@
+import { supabase } from './supabase'
+
 export type Priority = 'CRITICAL' | 'HIGH' | 'MEDIUM'
 export type ComplaintStatus = 'OPEN' | 'ASSIGNED' | 'RESOLVED'
 
@@ -17,6 +19,8 @@ export type Complaint = {
   description: string
   voiceUrl?: string
   photoUrl?: string
+  citizenEmail?: string
+  citizenPhone?: string
 }
 
 export type Department = {
@@ -97,20 +101,28 @@ const DEFAULT_DEPARTMENTS: Department[] = [
 ]
 
 export const civiclensApi = {
-  getComplaints(): Complaint[] {
-    const data = localStorage.getItem('civiclens_complaints')
-    if (!data) {
-      localStorage.setItem('civiclens_complaints', JSON.stringify(DEFAULT_COMPLAINTS))
-      return DEFAULT_COMPLAINTS
+  async getComplaints(): Promise<Complaint[]> {
+    try {
+      const { data, error } = await supabase
+        .from('complaints')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching complaints from Supabase:', error.message);
+        const local = localStorage.getItem('civiclens_complaints');
+        return local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
+      }
+      return data || [];
+    } catch (e) {
+      console.error('Database connection failed:', e);
+      const local = localStorage.getItem('civiclens_complaints');
+      return local ? JSON.parse(local) : DEFAULT_COMPLAINTS;
     }
-    return JSON.parse(data)
   },
 
-  addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'>): Complaint {
-    const list = this.getComplaints()
+  async addComplaint(complaint: Omit<Complaint, 'id' | 'date' | 'status' | 'slaRemaining' | 'slaTotal' | 'initials'>): Promise<Complaint> {
     const id = `#G-${Math.floor(1000 + Math.random() * 9000)}-${complaint.category.charAt(0).toUpperCase()}`
-    
-    // Formatting date
     const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
     const dateStr = new Date().toLocaleDateString('en-US', options)
 
@@ -124,40 +136,64 @@ export const civiclensApi = {
       initials: complaint.assignee ? complaint.assignee.split(' ').map(n => n[0]).join('').toUpperCase() : ''
     }
 
-    list.unshift(newComplaint)
-    localStorage.setItem('civiclens_complaints', JSON.stringify(list))
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .insert(newComplaint);
 
-    // Update active department issue count
-    const depts = this.getDepartments()
-    const targetDept = depts.find(d => d.name.toLowerCase().includes(complaint.category.toLowerCase()) || complaint.category.toLowerCase().includes(d.name.toLowerCase()))
-    if (targetDept) {
-      targetDept.activeIssues += 1
-      localStorage.setItem('civiclens_departments', JSON.stringify(depts))
+      if (error) {
+        console.error('Error saving complaint in Supabase:', error.message);
+      }
+    } catch (e) {
+      console.error('Failed to insert into Supabase:', e);
     }
 
-    return newComplaint
+    const localList = localStorage.getItem('civiclens_complaints') ? JSON.parse(localStorage.getItem('civiclens_complaints')!) : [...DEFAULT_COMPLAINTS];
+    localList.unshift(newComplaint);
+    localStorage.setItem('civiclens_complaints', JSON.stringify(localList));
+
+    const depts = this.getDepartments();
+    const targetDept = depts.find(d => d.name.toLowerCase().includes(complaint.category.toLowerCase()) || complaint.category.toLowerCase().includes(d.name.toLowerCase()));
+    if (targetDept) {
+      targetDept.activeIssues += 1;
+      localStorage.setItem('civiclens_departments', JSON.stringify(depts));
+    }
+
+    return newComplaint;
   },
 
-  updateComplaint(id: string, updates: Partial<Complaint>): Complaint[] {
-    const list = this.getComplaints()
-    const index = list.findIndex(c => c.id === id)
+  async updateComplaint(id: string, updates: Partial<Complaint>): Promise<Complaint[]> {
+    try {
+      const { error } = await supabase
+        .from('complaints')
+        .update(updates)
+        .eq('id', id);
+
+      if (error) {
+        console.error('Error updating complaint in Supabase:', error.message);
+      }
+    } catch (e) {
+      console.error('Failed to update Supabase complaint:', e);
+    }
+
+    const localList = localStorage.getItem('civiclens_complaints') ? JSON.parse(localStorage.getItem('civiclens_complaints')!) : [...DEFAULT_COMPLAINTS];
+    const index = localList.findIndex((c: any) => c.id === id);
     if (index !== -1) {
-      const original = list[index]!
-      
-      // If status changed to resolved, decrease active issues in department
+      const original = localList[index];
       if (updates.status === 'RESOLVED' && original.status !== 'RESOLVED') {
-        const depts = this.getDepartments()
-        const targetDept = depts.find(d => d.name.toLowerCase().includes(original.category.toLowerCase()) || original.category.toLowerCase().includes(d.name.toLowerCase()))
+        const depts = this.getDepartments();
+        const targetDept = depts.find(d => d.name.toLowerCase().includes(original.category.toLowerCase()) || original.category.toLowerCase().includes(d.name.toLowerCase()));
         if (targetDept) {
-          targetDept.activeIssues = Math.max(0, targetDept.activeIssues - 1)
-          localStorage.setItem('civiclens_departments', JSON.stringify(depts))
+          targetDept.activeIssues = Math.max(0, targetDept.activeIssues - 1);
+          localStorage.setItem('civiclens_departments', JSON.stringify(depts));
         }
       }
 
-      list[index] = { ...original, ...updates }
-      localStorage.setItem('civiclens_complaints', JSON.stringify(list))
+      localList[index] = { ...original, ...updates };
+      localStorage.setItem('civiclens_complaints', JSON.stringify(localList));
     }
-    return list
+
+    return this.getComplaints();
   },
 
   getDepartments(): Department[] {
@@ -179,8 +215,8 @@ export const civiclensApi = {
     return list
   },
 
-  getKpis() {
-    const list = this.getComplaints()
+  async getKpis() {
+    const list = await this.getComplaints()
     const total = list.length
     const open = list.filter(c => c.status !== 'RESOLVED').length
     const resolved = list.filter(c => c.status === 'RESOLVED').length

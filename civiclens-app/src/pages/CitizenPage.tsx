@@ -45,6 +45,10 @@ export default function CitizenPage() {
   const [gpsOk, setGpsOk]         = useState(false)
   const [error, setError]         = useState('')
 
+  const [citizenEmail, setCitizenEmail] = useState('')
+  const [citizenPhone, setCitizenPhone] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
@@ -52,6 +56,8 @@ export default function CitizenPage() {
       if (!session && !phone) {
         navigate('/login?role=citizen')
       } else {
+        setCitizenEmail(session?.user?.email || '')
+        setCitizenPhone(phone || '')
         setLoading(false)
       }
     }
@@ -120,9 +126,10 @@ export default function CitizenPage() {
     )
   }
 
-  const submit = () => {
+  const submit = async () => {
     if (!text.trim()) { setError('Please describe the problem before submitting.'); return }
     setError('')
+    setSubmitting(true)
     
     // Map selected dept key to official department names
     const categoryMapping: Record<string, string> = {
@@ -151,19 +158,48 @@ export default function CitizenPage() {
     }
     const categoryIcon = categoryIconMapping[dept] || 'balance'
 
-    const newTicket = civiclensApi.addComplaint({
-      category: categoryName,
-      categoryIcon,
-      location: address || 'Vijay Nagar, Indore',
-      density: 'Med',
-      priority: dept === 'fire' ? 'CRITICAL' : 'MEDIUM',
-      description: text,
-      photoUrl: previews[0] || '',
-      assignee: '',
-    })
+    try {
+      const newTicket = await civiclensApi.addComplaint({
+        category: categoryName,
+        categoryIcon,
+        location: address || 'Vijay Nagar, Indore',
+        density: 'Med',
+        priority: dept === 'fire' ? 'CRITICAL' : 'MEDIUM',
+        description: text,
+        photoUrl: previews[0] || '',
+        assignee: '',
+        citizenEmail,
+        citizenPhone
+      })
 
-    setTracking(newTicket.id)
-    setModal(true)
+      setTracking(newTicket.id)
+      setModal(true)
+    } catch (e) {
+      console.error(e)
+      setError('Failed to submit report. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const getEtaMessage = () => {
+    switch (dept) {
+      case 'fire':
+        return '🚨 EMERGENCY SLA: Immediate dispatch initiated!'
+      case 'water':
+      case 'drainage':
+        return '🕒 SLA Target: Fixed within 24 hours'
+      case 'sanitation':
+      case 'electrical':
+      case 'housing':
+        return '🕒 SLA Target: Fixed within 48 hours'
+      case 'parks':
+        return '🕒 SLA Target: Fixed within 72 hours'
+      case 'roads':
+        return '🕒 SLA Target: Fixed within 5 business days'
+      default:
+        return '🕒 SLA Target: Fixed within 48 hours'
+    }
   }
 
   const reset = () => {
@@ -447,9 +483,15 @@ export default function CitizenPage() {
                 <span className="material-symbols-outlined text-[16px]">save</span>
                 Save as draft
               </button>
-              <button onClick={submit} className="btn-primary px-8">
-                Submit complaint
-                <span className="material-symbols-outlined text-[16px]">send</span>
+              <button 
+                onClick={submit} 
+                disabled={submitting} 
+                className="btn-primary px-8 flex items-center gap-1.5"
+              >
+                {submitting ? 'Submitting...' : 'Submit complaint'}
+                <span className={`material-symbols-outlined text-[16px] ${submitting ? 'animate-spin' : ''}`}>
+                  {submitting ? 'autorenew' : 'send'}
+                </span>
               </button>
             </div>
           </div>
@@ -458,19 +500,55 @@ export default function CitizenPage() {
 
       {/* ── Success Modal ── */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-md p-4">
-          <div className="bg-surface-container-low border border-white/[0.12] rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl">
-            <div className="w-14 h-14 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-5">
-              <span className="material-symbols-outlined text-green-400 text-[28px]" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+          <div className="bg-surface-container-low border border-white/[0.12] rounded-2xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in relative overflow-hidden">
+            {/* Ambient glow in background of modal */}
+            <div className="absolute -top-10 -left-10 w-24 h-24 bg-green-500/10 rounded-full blur-xl pointer-events-none" />
+            
+            {/* Animated checkmark circle */}
+            <div className="w-16 h-16 rounded-full bg-green-500/10 border border-green-500/20 flex items-center justify-center mx-auto mb-5 animate-pulse-slow">
+              <span className="material-symbols-outlined text-green-400 text-[36px] animate-scale-up" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
             </div>
-            <h2 className="text-xl font-semibold text-primary mb-1.5">Complaint submitted!</h2>
-            <p className="text-sm text-on-surface-variant mb-2">We've received your complaint and our AI is routing it to the right team.</p>
-            <p className="text-xs font-medium mb-6">
-              Your ID: <code className="bg-surface-container px-2 py-0.5 rounded text-primary">{trackingId}</code>
-            </p>
+            
+            <h2 className="text-xl font-semibold text-primary mb-1.5">Complaint Filed!</h2>
+            <p className="text-sm text-on-surface-variant mb-4">Your report has been successfully recorded on the Supabase network.</p>
+            
+            {/* Ticket details container */}
+            <div className="bg-surface-container-lowest/60 border border-white/5 rounded-xl p-4 mb-6 flex flex-col gap-2.5 text-left">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-on-surface-variant">Ticket ID</span>
+                <code className="bg-surface-container px-2 py-0.5 rounded text-primary font-bold">{trackingId}</code>
+              </div>
+              <div className="flex justify-between items-center text-xs border-t border-white/5 pt-2">
+                <span className="text-on-surface-variant">Priority</span>
+                <span className={`font-semibold ${dept === 'fire' ? 'text-error' : 'text-primary'}`}>
+                  {dept === 'fire' ? 'CRITICAL' : 'MEDIUM'}
+                </span>
+              </div>
+              <div className="flex flex-col border-t border-white/5 pt-2 gap-0.5">
+                <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Estimated Resolution</span>
+                <span className="text-xs font-semibold text-green-400">{getEtaMessage()}</span>
+              </div>
+            </div>
+
             <div className="flex gap-3">
-              <button onClick={() => setModal(false)} className="flex-1 btn-ghost py-2.5">Track it</button>
-              <button onClick={reset} className="flex-1 btn-primary py-2.5">New report</button>
+              <button 
+                onClick={() => {
+                  setModal(false)
+                  navigate('/citizen/dashboard')
+                }} 
+                className="flex-1 btn-ghost py-2.5 rounded-xl text-xs font-semibold hover:bg-white/5 transition-all"
+              >
+                Track on Dashboard
+              </button>
+              <button 
+                onClick={() => {
+                  reset()
+                }} 
+                className="flex-1 btn-primary py-2.5 rounded-xl text-xs font-semibold shadow-lg hover:opacity-95 transition-all"
+              >
+                File Another
+              </button>
             </div>
           </div>
         </div>

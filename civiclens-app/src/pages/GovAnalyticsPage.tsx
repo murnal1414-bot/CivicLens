@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
 
@@ -15,13 +15,21 @@ const workers = [
 ]
 
 export default function GovAnalyticsPage() {
-  const stats = civiclensApi.getKpis()
+  const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '0%' })
   const departments = civiclensApi.getDepartments()
   const totalWorkers = departments.reduce((sum, d) => sum + d.workersCount, 0)
   const activeIssues = stats.open
 
   const [deptFilter, setDeptFilter] = useState('Health & Sanitation')
   const [timeRange, setTimeRange] = useState<'week' | 'month' | 'quarter'>('month')
+
+  useEffect(() => {
+    const load = async () => {
+      const data = await civiclensApi.getKpis()
+      setStats(data)
+    }
+    load()
+  }, [])
 
   return (
     <div className="dark flex min-h-screen bg-background text-sm">

@@ -13,22 +13,18 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "./ui/popover"
-import { supabase } from '../services/supabase'
-
-// Navigation links array
-const navigationLinks = [
-  { href: "/", label: "Home" },
-  { href: "/file-complaint", label: "File a Complaint" },
-  { href: "/gov/overview", label: "Officer Portal" },
-]
+import { supabase, GOV_EMAIL_WHITELIST } from '../services/supabase'
 
 export default function Navbar() {
   const { pathname } = useLocation()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [sessionEmail, setSessionEmail] = useState('')
 
   useEffect(() => {
     const checkAuth = async () => {
       const { data: { session } } = await supabase.auth.getSession()
+      const email = session?.user?.email || ''
+      setSessionEmail(email)
       const phone = localStorage.getItem('citizen_phone')
       const officerEmail = localStorage.getItem('officer_email')
       const officerUsername = localStorage.getItem('officer_username')
@@ -37,6 +33,8 @@ export default function Navbar() {
     checkAuth()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      const email = session?.user?.email || ''
+      setSessionEmail(email)
       const phone = localStorage.getItem('citizen_phone')
       const officerEmail = localStorage.getItem('officer_email')
       const officerUsername = localStorage.getItem('officer_username')
@@ -54,8 +52,39 @@ export default function Navbar() {
     localStorage.removeItem('officer_email')
     localStorage.removeItem('officer_username')
     setIsLoggedIn(false)
+    setSessionEmail('')
     window.location.href = '/'
   }
+
+  const getNavLinks = () => {
+    if (!isLoggedIn) {
+      return [
+        { href: "/", label: "Home" },
+        { href: "/login?role=citizen", label: "File a Complaint" },
+        { href: "/login?role=officer", label: "Officer Portal" },
+      ]
+    }
+    
+    // Check if officer is logged in via local storage or whitelisted session
+    const hasOfficerStorage = !!localStorage.getItem('officer_email') || !!localStorage.getItem('officer_username')
+    const isWhitelistedSession = sessionEmail && GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(sessionEmail.toLowerCase())
+    
+    const isOfficer = hasOfficerStorage || isWhitelistedSession
+    
+    if (isOfficer) {
+      return [
+        { href: "/gov/overview", label: "Officer Portal" },
+      ]
+    } else {
+      // Citizen
+      return [
+        { href: "/citizen/dashboard", label: "Dashboard" },
+        { href: "/file-complaint", label: "File a Complaint" },
+      ]
+    }
+  }
+
+  const links = getNavLinks()
 
   return (
     <header className="fixed top-3 left-0 right-0 z-50 px-4 md:px-10">
@@ -96,7 +125,7 @@ export default function Navbar() {
               <PopoverContent align="start" className="w-40 p-1 md:hidden mt-3 bg-black/90 dark:bg-black/95 border-white/10">
                 <NavigationMenu className="max-w-none *:w-full">
                   <NavigationMenuList className="flex-col items-start gap-0">
-                    {navigationLinks.map((link, index) => (
+                    {links.map((link, index) => (
                       <NavigationMenuItem key={index} className="w-full">
                         <NavigationMenuLink
                           href={link.href}
@@ -122,7 +151,7 @@ export default function Navbar() {
             {/* Navigation menu */}
             <NavigationMenu className="hidden md:block">
               <NavigationMenuList className="gap-1">
-                {navigationLinks.map((link, index) => (
+                {links.map((link, index) => (
                   <NavigationMenuItem key={index}>
                     <NavigationMenuLink
                       href={link.href}

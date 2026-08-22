@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
@@ -9,8 +10,16 @@ const activity = [
 ]
 
 export default function GovOverviewPage() {
-  const stats = civiclensApi.getKpis()
+  const [stats, setStats] = useState({ total: 0, open: 0, resolved: 0, slaComplianceRate: '0%' })
   const departments = civiclensApi.getDepartments().slice(0, 5)
+
+  useEffect(() => {
+    const load = async () => {
+      const data = await civiclensApi.getKpis()
+      setStats(data)
+    }
+    load()
+  }, [])
 
   const kpis = [
     { icon: 'forum',           label: 'Total Complaints',   value: stats.total.toString(), trend: '+12%', trendUp: true,  accent: 'primary',   bar: 70 },

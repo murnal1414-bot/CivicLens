@@ -9,6 +9,7 @@ import GovAnalyticsPage from './pages/GovAnalyticsPage'
 import GovDepartmentsPage from './pages/GovDepartmentsPage'
 import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
+import CitizenDashboardPage from './pages/CitizenDashboardPage'
 import './index.css'
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/file-complaint" element={<CitizenPage />} />
+        <Route path="/citizen/dashboard" element={<CitizenDashboardPage />} />
         <Route path="/login" element={<LoginPage />} />
         
         {/* Protected Officer Routes */}
