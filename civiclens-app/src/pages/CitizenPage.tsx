@@ -111,6 +111,14 @@ export default function CitizenPage() {
         }
       }, 300)
 
+      // Watch for dynamic size changes (like hover expansions)
+      const resizeObserver = new ResizeObserver(() => {
+        if (mapInstance.current) {
+          mapInstance.current.invalidateSize()
+        }
+      })
+      resizeObserver.observe(mapRef.current)
+
       // On dragend, reverse geocode to update address
       marker.on('dragend', async () => {
         const position = marker.getLatLng()
@@ -143,47 +151,56 @@ export default function CitizenPage() {
           console.error('Reverse geocode failed:', err)
         }
       })
+      
+      // Store cleanup function directly to run on unmount
+      mapRef.current.dataset.cleanup = 'true'
+      return () => {
+        resizeObserver.disconnect()
+        if (mapInstance.current) {
+          mapInstance.current.remove()
+          mapInstance.current = null
+        }
+      }
     }
 
     return () => {
-      // Clean up map when component unmounts
-      if (mapInstance.current) {
-        mapInstance.current.remove()
-        mapInstance.current = null
-      }
+      // Clean up handled by closure return if initialized
     }
   }, [])
 
-  // Sync address search field inputs to map coordinates (debounced 1.2s)
-  useEffect(() => {
+  const [isFetchingLocation, setIsFetchingLocation] = useState(false)
+
+  // Manual location fetch instead of auto-debounce
+  const handleFetchLocation = async () => {
     if (!address.trim() || !mapInstance.current || !markerRef.current) return
 
-    const delayDebounce = setTimeout(async () => {
-      // Don't search if address is just coordinates
-      if (/^-?\d+(\.\d+)?, \s*-?\d+(\.\d+)?$/.test(address.trim())) return
+    // Don't search if address is just coordinates
+    if (/^-?\d+(\.\d+)?, \s*-?\d+(\.\d+)?$/.test(address.trim())) return
 
-      try {
-        const query = encodeURIComponent(`Indore, ${address}`)
-        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`)
-        const data = await res.json()
-        if (data && data.length > 0) {
-          const first = data[0]
-          const newLat = parseFloat(first.lat)
-          const newLng = parseFloat(first.lon)
-          
-          setLat(newLat)
-          setLng(newLng)
-          
-          markerRef.current?.setLatLng([newLat, newLng])
-          mapInstance.current?.setView([newLat, newLng], 15)
-        }
-      } catch (err) {
-        console.error('Geocode search failed:', err)
+    setIsFetchingLocation(true)
+    try {
+      const query = encodeURIComponent(`Indore, ${address}`)
+      const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${query}&limit=1`)
+      const data = await res.json()
+      if (data && data.length > 0) {
+        const first = data[0]
+        const newLat = parseFloat(first.lat)
+        const newLng = parseFloat(first.lon)
+        
+        setLat(newLat)
+        setLng(newLng)
+        
+        markerRef.current?.setLatLng([newLat, newLng])
+        mapInstance.current?.setView([newLat, newLng], 15)
+      } else {
+        alert('Location not found. Please try a different address.')
       }
-    }, 1200)
-
-    return () => clearTimeout(delayDebounce)
-  }, [address])
+    } catch (err) {
+      console.error('Geocode search failed:', err)
+    } finally {
+      setIsFetchingLocation(false)
+    }
+  }
 
   const [aiRunning, setAiRunning] = useState(false)
   const [aiExplanation, setAiExplanation] = useState('')
@@ -567,12 +584,13 @@ export default function CitizenPage() {
                   <span className="text-[10px] text-on-surface-variant/40 uppercase tracking-widest">3 of 3</span>
                 </div>
 
-                {/* Map container */}
-                <div className="relative w-full rounded-xl overflow-hidden border border-white/10 bg-surface-container hover:border-primary/30 transition-all duration-300 z-10" style={{ height: '220px' }}>
+                {/* Map container with hover expansion */}
+                <div className="relative w-full rounded-xl overflow-hidden border border-white/10 bg-surface-container hover:border-primary/30 transition-[height] duration-500 ease-in-out z-10 h-[220px] hover:h-[350px]">
                   <div ref={mapRef} style={{ width: '100%', height: '100%' }} className="text-black" />
                   <button
                     onClick={getLocation}
                     title="Use my current location"
+                    type="button"
                     className="absolute top-3 right-3 w-9 h-9 bg-surface-container/90 backdrop-blur rounded-full border border-white/10 flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors text-on-surface shadow z-[1000]"
                   >
                     <span className={`material-symbols-outlined text-[16px] ${gpsLoading ? 'animate-spin' : ''}`}>
@@ -583,13 +601,26 @@ export default function CitizenPage() {
 
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] text-on-surface-variant uppercase tracking-wider">Address or landmark</label>
-                  <input
-                    value={address}
-                    onChange={e => setAddress(e.target.value)}
-                    className="form-input"
-                    placeholder="E.g., Near Palasia Square, M.G. Road"
-                    type="text"
-                  />
+                  <div className="flex gap-2">
+                    <input
+                      value={address}
+                      onChange={e => setAddress(e.target.value)}
+                      className="form-input flex-1"
+                      placeholder="E.g., Near Palasia Square, M.G. Road"
+                      type="text"
+                    />
+                    <button
+                      onClick={handleFetchLocation}
+                      disabled={isFetchingLocation || !address.trim()}
+                      className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                      type="button"
+                    >
+                      <span className={`material-symbols-outlined text-[18px] ${isFetchingLocation ? 'animate-spin' : ''}`}>
+                        {isFetchingLocation ? 'progress_activity' : 'search'}
+                      </span>
+                      Fetch
+                    </button>
+                  </div>
                 </div>
 
                 {gpsOk && (

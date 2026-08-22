@@ -164,6 +164,8 @@ export default function GovOverviewPage() {
       }
     })
 
+    const bounds = L.latLngBounds([])
+
     complaintsList.forEach(c => {
       // Color markers based on priority: Critical = Red, High = Orange, Medium = Blue
       let color = '#3b82f6' // Blue
@@ -173,9 +175,15 @@ export default function GovOverviewPage() {
         color = '#facc15' // Orange/Yellow
       }
 
-      // Generate spread coordinates around Indore center if coordinates are missing in DB
-      const latVal = c.latitude || (22.7196 + (parseFloat(c.id.replace(/\D/g, '')) % 100) * 0.0003 - 0.015)
-      const lngVal = c.longitude || (75.8577 + (parseFloat(c.id.replace(/\D/g, '')) % 70) * 0.0003 - 0.01)
+      let latVal = Number(c.latitude)
+      let lngVal = Number(c.longitude)
+      
+      // If missing, or if it's the exact default coordinate (which causes stacking), apply a tiny random offset
+      if (!latVal || !lngVal || (Math.abs(latVal - 22.7196) < 0.0001 && Math.abs(lngVal - 75.8577) < 0.0001)) {
+        const hash = c.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        latVal = 22.7196 + ((hash % 100) * 0.0004) - 0.02
+        lngVal = 75.8577 + ((hash % 70) * 0.0004) - 0.015
+      }
 
       const circle = L.circle([latVal, lngVal], {
         color: color,
@@ -183,6 +191,8 @@ export default function GovOverviewPage() {
         fillOpacity: 0.8,
         radius: 120
       }).addTo(mapInstance.current!)
+
+      bounds.extend([latVal, lngVal])
 
       circle.bindPopup(`
         <div style="font-family: sans-serif; font-size: 11px; padding: 2px; color: #111;">
@@ -195,8 +205,24 @@ export default function GovOverviewPage() {
         </div>
       `)
     })
+    
+    // Fit map bounds to show all markers
+    if (bounds.isValid() && mapInstance.current) {
+      mapInstance.current.fitBounds(bounds, { padding: [30, 30], maxZoom: 14 })
+    }
+    
+    // Watch for dynamic size changes (hover expansions)
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstance.current) {
+        mapInstance.current.invalidateSize()
+      }
+    })
+    if (mapRef.current) {
+      resizeObserver.observe(mapRef.current)
+    }
 
     return () => {
+      resizeObserver.disconnect()
       if (mapInstance.current) {
         mapInstance.current.remove()
         mapInstance.current = null
@@ -332,7 +358,7 @@ export default function GovOverviewPage() {
             </div>
 
             {/* Live map card */}
-            <div className="lg:col-span-4 bg-surface-container-low/40 border border-white/5 rounded-2xl p-4 flex flex-col relative overflow-hidden group z-10" style={{ height: '320px' }}>
+            <div className="lg:col-span-4 bg-surface-container-low/40 border border-white/5 rounded-2xl p-4 flex flex-col relative overflow-hidden group z-10 transition-[height] duration-500 ease-in-out h-[320px] hover:h-[500px]">
               <div className="absolute inset-0 z-0">
                 <div ref={mapRef} style={{ width: '100%', height: '100%' }} className="text-black" />
               </div>
@@ -341,6 +367,23 @@ export default function GovOverviewPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                   Live Map
                 </span>
+                
+                <button 
+                  onClick={() => {
+                    const mapEl = mapRef.current?.parentElement?.parentElement
+                    if (mapEl) {
+                      if (document.fullscreenElement) {
+                        document.exitFullscreen()
+                      } else {
+                        mapEl.requestFullscreen()
+                      }
+                    }
+                  }}
+                  className="z-[1000] p-2 bg-surface-container/90 backdrop-blur text-on-surface hover:text-primary rounded-xl border border-white/10 hover:border-primary/50 shadow-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-auto cursor-pointer"
+                  title="Toggle Fullscreen"
+                >
+                  <span className="material-symbols-rounded text-[20px]">fullscreen</span>
+                </button>
               </div>
 
               <div className="relative z-10 mt-auto bg-surface-container-lowest/95 backdrop-blur border border-white/10 p-3 rounded-xl shadow-lg pointer-events-none">
