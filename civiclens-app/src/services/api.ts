@@ -152,18 +152,64 @@ function clusterComplaints(list: Complaint[]): Complaint[] {
     }
   }
 
+  const officialCategoryMapping: Record<string, string> = {
+    'water': 'Water Work and Drainage Department',
+    'drain': 'Water Work and Drainage Department',
+    'sanitat': 'Health Department (Sanitation and Solid Waste Management)',
+    'health': 'Health Department (Sanitation and Solid Waste Management)',
+    'waste': 'Health Department (Sanitation and Solid Waste Management)',
+    'streetlight': 'Electrical and Mechanical Department',
+    'electric': 'Electrical and Mechanical Department',
+    'mechanical': 'Electrical and Mechanical Department',
+    'road': 'Public Work Department',
+    'public work': 'Public Work Department',
+    'park': 'Garden Department & Regional Park',
+    'garden': 'Garden Department & Regional Park',
+    'fire': 'Fire Department',
+    'revenue': 'Revenue Department',
+    'it': 'Information Technology Department',
+    'information': 'Information Technology Department',
+    'housing': 'Housing & Environmental Department',
+    'supply': 'Food and Civil Supplies Department',
+    'food': 'Food and Civil Supplies Department',
+    'education': 'Education Department',
+    'school': 'Education Department',
+    'law': 'Law and General Administration Department',
+    'admin': 'Law and General Administration Department',
+    'planning': 'Planning & Rehabilitation Department',
+    'rehab': 'Planning & Rehabilitation Department',
+    'account': 'Accounts Department',
+    'audit': 'Accounts Department',
+    'removal': 'Removal Department',
+    'encroach': 'Removal Department',
+    'zoo': 'Zoo Department',
+  }
+
   return list.map(c => {
+    const catLower = c.category.toLowerCase()
+    let mappedCategory = c.category
+    for (const [keyword, officialName] of Object.entries(officialCategoryMapping)) {
+      if (catLower.includes(keyword)) {
+        mappedCategory = officialName
+        break
+      }
+    }
+
     const info = clusterMap.get(c.id)
     if (info) {
       return {
         ...c,
+        category: mappedCategory,
         priority: info.priority,
         location: info.displayLocation,
         slaRemaining: 'Immediate action required',
         slaTotal: `Cluster: ${info.size} active reports`
       }
     }
-    return c
+    return {
+      ...c,
+      category: mappedCategory
+    }
   })
 }
 
@@ -268,7 +314,7 @@ export const civiclensApi = {
 
   getDepartments(): Department[] {
     const data = localStorage.getItem('civiclens_departments')
-    if (!data || JSON.parse(data).length !== 16) {
+    if (!data || JSON.parse(data).length !== 16 || JSON.parse(data)[0]?.name !== 'Water Work and Drainage Department') {
       localStorage.setItem('civiclens_departments', JSON.stringify(DEFAULT_DEPARTMENTS))
       return DEFAULT_DEPARTMENTS
     }
