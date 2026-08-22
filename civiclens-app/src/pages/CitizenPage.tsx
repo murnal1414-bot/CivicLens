@@ -111,6 +111,27 @@ export default function CitizenPage() {
       markerRef.current = marker
       mapInstance.current = map
 
+      // Clicking the map drops the pin and reverse-geocodes the address
+      map.on('click', async (e: any) => {
+        const { lat: cLat, lng: cLng } = e.latlng
+        setLat(cLat)
+        setLng(cLng)
+        marker.setLatLng([cLat, cLng])
+        setShowSuggestions(false)
+        setLocationError('')
+        setAddress('Locating…')
+        try {
+          const res = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${cLat}&lon=${cLng}`,
+            { headers: { 'Accept-Language': 'en' } }
+          )
+          const data = await res.json()
+          setAddress(data?.display_name ?? `${cLat.toFixed(5)}, ${cLng.toFixed(5)}`)
+        } catch {
+          setAddress(`${cLat.toFixed(5)}, ${cLng.toFixed(5)}`)
+        }
+      })
+
       // Recompute tile layout if the card animates / resizes
       const resizeObserver = new ResizeObserver(() => {
         mapInstance.current?.invalidateSize()
@@ -129,6 +150,9 @@ export default function CitizenPage() {
 
   const [isFetchingLocation, setIsFetchingLocation] = useState(false)
   const [locationError, setLocationError] = useState('')
+  const [suggestions, setSuggestions] = useState<any[]>([])
+  const [showSuggestions, setShowSuggestions] = useState(false)
+  const suggestionDebounce = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // Fetch location via Nominatim — tries Indore-scoped first, falls back to India-wide
   const handleFetchLocation = async () => {
@@ -175,6 +199,42 @@ export default function CitizenPage() {
       setIsFetchingLocation(false)
     }
   }
+
+  // ── Autocomplete helpers ───────────────────────────────────────────────────
+  const fetchSuggestions = async (query: string) => {
+    if (query.trim().length < 3) { setSuggestions([]); setShowSuggestions(false); return }
+    try {
+      const q = encodeURIComponent(`${query}, Indore, India`)
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=6&countrycodes=in`,
+        { headers: { 'Accept-Language': 'en' } }
+      )
+      const data = await res.json()
+      setSuggestions(data || [])
+      setShowSuggestions((data || []).length > 0)
+    } catch {
+      setSuggestions([]); setShowSuggestions(false)
+    }
+  }
+
+  const handleAddressChange = (val: string) => {
+    setAddress(val)
+    if (locationError) setLocationError('')
+    if (suggestionDebounce.current) clearTimeout(suggestionDebounce.current)
+    suggestionDebounce.current = setTimeout(() => fetchSuggestions(val), 350)
+  }
+
+  const selectSuggestion = (place: any) => {
+    const nLat = parseFloat(place.lat)
+    const nLng = parseFloat(place.lon)
+    setLat(nLat); setLng(nLng)
+    setAddress(place.display_name)
+    markerRef.current?.setLatLng([nLat, nLng])
+    mapInstance.current?.setView([nLat, nLng], 15)
+    setSuggestions([]); setShowSuggestions(false)
+    setLocationError('')
+  }
+  // ──────────────────────────────────────────────────────────────────────────
 
   const [aiRunning, setAiRunning] = useState(false)
   const [aiExplanation, setAiExplanation] = useState('')
@@ -561,6 +621,7 @@ export default function CitizenPage() {
                 {/* Map container with hover expansion */}
                 <div className="relative w-full rounded-xl overflow-hidden border border-white/10 bg-surface-container hover:border-primary/30 transition-[height] duration-500 ease-in-out z-10 h-[220px] hover:h-[350px]">
                   <div ref={mapRef} style={{ width: '100%', height: '100%' }} className="text-black" />
+                  {/* GPS button */}
                   <button
                     onClick={getLocation}
                     title="Use my current location"
@@ -571,23 +632,51 @@ export default function CitizenPage() {
                       {gpsLoading ? 'refresh' : 'my_location'}
                     </span>
                   </button>
+                  {/* Click-to-pin hint */}
+                  <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-[1000] pointer-events-none">
+                    <span className="px-2.5 py-1 bg-background/80 backdrop-blur border border-white/10 rounded-full text-[9px] text-on-surface-variant uppercase tracking-widest flex items-center gap-1.5">
+                      <span className="material-symbols-outlined text-[11px] text-primary">location_on</span>
+                      Tap the map to pin your location
+                    </span>
+                  </div>
                 </div>
 
+                {/* Address input with autocomplete */}
                 <div className="flex flex-col gap-1.5">
                   <label className="text-[10px] text-on-surface-variant uppercase tracking-wider">Address or landmark</label>
-                  <div className="flex gap-2">
-                    <input
-                      value={address}
-                      onChange={e => { setAddress(e.target.value); if (locationError) setLocationError('') }}
-                      onKeyDown={e => e.key === 'Enter' && handleFetchLocation()}
-                      className="form-input flex-1"
-                      placeholder="E.g., Near Palasia Square, M.G. Road"
-                      type="text"
-                    />
+                  <div className="relative flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        value={address}
+                        onChange={e => handleAddressChange(e.target.value)}
+                        onKeyDown={e => { if (e.key === 'Enter') { handleFetchLocation(); setShowSuggestions(false) } if (e.key === 'Escape') setShowSuggestions(false) }}
+                        onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
+                        onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
+                        className="form-input w-full"
+                        placeholder="E.g., Silicon City, Palasia Square…"
+                        autoComplete="off"
+                        type="text"
+                      />
+                      {/* Autocomplete dropdown */}
+                      {showSuggestions && suggestions.length > 0 && (
+                        <ul className="absolute left-0 right-0 top-full mt-1 z-[2000] bg-surface-container-low border border-white/10 rounded-xl shadow-2xl overflow-hidden divide-y divide-white/[0.05]">
+                          {suggestions.map((place, i) => (
+                            <li
+                              key={i}
+                              onMouseDown={() => selectSuggestion(place)}
+                              className="flex items-start gap-2.5 px-3 py-2.5 hover:bg-primary/10 cursor-pointer transition-colors"
+                            >
+                              <span className="material-symbols-outlined text-primary text-[14px] mt-0.5 shrink-0">location_on</span>
+                              <span className="text-[11px] text-on-surface leading-snug line-clamp-2">{place.display_name}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                     <button
-                      onClick={handleFetchLocation}
+                      onClick={() => { handleFetchLocation(); setShowSuggestions(false) }}
                       disabled={isFetchingLocation || !address.trim()}
-                      className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2"
+                      className="px-4 py-2 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/20 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 flex items-center gap-2 shrink-0"
                       type="button"
                     >
                       <span className={`material-symbols-outlined text-[18px] ${isFetchingLocation ? 'animate-spin' : ''}`}>
