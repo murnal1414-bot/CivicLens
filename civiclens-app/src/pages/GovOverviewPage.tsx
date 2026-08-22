@@ -180,7 +180,7 @@ export default function GovOverviewPage() {
       
       // If missing, or if it's the exact default coordinate (which causes stacking), apply a tiny random offset
       if (!latVal || !lngVal || (Math.abs(latVal - 22.7196) < 0.0001 && Math.abs(lngVal - 75.8577) < 0.0001)) {
-        const hash = c.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0)
+        const hash = c.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
         latVal = 22.7196 + ((hash % 100) * 0.0004) - 0.02
         lngVal = 75.8577 + ((hash % 70) * 0.0004) - 0.015
       }
