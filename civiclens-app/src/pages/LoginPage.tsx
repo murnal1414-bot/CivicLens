@@ -30,6 +30,7 @@ export default function LoginPage() {
         // If checking for government portal access
         if (tab === 'officer') {
           if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+            localStorage.removeItem('citizen_phone') // Clear citizen state!
             navigate('/gov/overview')
           } else {
             setMessage(`Access Denied: ${email} is not authorized to view the government portal. Please contact the administrator.`)
@@ -37,6 +38,8 @@ export default function LoginPage() {
           }
         } else {
           // Citizen flow: go to citizen dashboard
+          localStorage.removeItem('officer_email') // Clear officer state!
+          localStorage.removeItem('officer_username')
           navigate('/citizen/dashboard')
         }
       }
@@ -49,12 +52,15 @@ export default function LoginPage() {
         const email = session.user.email || ''
         if (tab === 'officer') {
           if (GOV_EMAIL_WHITELIST.map(e => e.toLowerCase()).includes(email.toLowerCase())) {
+            localStorage.removeItem('citizen_phone') // Clear citizen state!
             navigate('/gov/overview')
           } else {
             setMessage(`Access Denied: ${email} is not authorized to view the government portal. Please contact the administrator.`)
             await supabase.auth.signOut()
           }
         } else {
+          localStorage.removeItem('officer_email') // Clear officer state!
+          localStorage.removeItem('officer_username')
           navigate('/citizen/dashboard')
         }
       }
@@ -68,7 +74,7 @@ export default function LoginPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: {
-        redirectTo: window.location.origin + '/login',
+        redirectTo: window.location.origin + `/login?role=${tab}`,
         queryParams: {
           prompt: 'select_account'
         }
@@ -111,6 +117,8 @@ export default function LoginPage() {
       }
       setMessage('')
       // Mock login: Store phone in localStorage and redirect to citizen page
+      localStorage.removeItem('officer_email')
+      localStorage.removeItem('officer_username')
       localStorage.setItem('citizen_phone', phone.trim())
       navigate('/citizen/dashboard')
     } else {
@@ -128,6 +136,7 @@ export default function LoginPage() {
       }
       setMessage('')
       // Mock login: Store officer email in localStorage and redirect to officer overview
+      localStorage.removeItem('citizen_phone')
       localStorage.setItem('officer_email', username.trim().toLowerCase())
       navigate('/gov/overview')
     }
