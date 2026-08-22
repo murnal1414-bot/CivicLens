@@ -95,6 +95,20 @@ export default function GovComplaintsPage() {
       setLoading(false)
     }
     load()
+
+    // Poll for updates every 15 seconds to ensure real-time synchronization on the Gov portal
+    const interval = setInterval(async () => {
+      try {
+        const data = await civiclensApi.getComplaints()
+        setComplaints(data)
+        const vers = await civiclensApi.getVerifications()
+        setVerifications(vers)
+      } catch (err) {
+        console.error("Gov polling sync failed:", err)
+      }
+    }, 15000)
+
+    return () => clearInterval(interval)
   }, [])
 
   useEffect(() => {
