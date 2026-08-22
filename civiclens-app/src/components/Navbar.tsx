@@ -1,10 +1,23 @@
 import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
+import { Button } from "./ui/button"
+import {
+  NavigationMenu,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+} from "./ui/navigation-menu"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "./ui/popover"
 
-const links = [
-  { to: '/', label: 'Home' },
-  { to: '/file-complaint', label: 'File a Complaint' },
-  { to: '/gov/overview', label: 'Officer Portal' },
+// Navigation links array
+const navigationLinks = [
+  { href: "/", label: "Home" },
+  { href: "/file-complaint", label: "File a Complaint" },
+  { href: "/gov/overview", label: "Officer Portal" },
 ]
 
 export default function Navbar() {
@@ -12,49 +25,98 @@ export default function Navbar() {
 
   return (
     <header className="fixed top-3 left-0 right-0 z-50 px-4 md:px-10">
-      <div className="h-14 w-full max-w-[1200px] mx-auto liquid-glass rounded-full px-5 flex items-center justify-between border border-black/[0.06] dark:border-white/[0.12]">
-        {/* Logo */}
-        <Link to="/" className="flex items-center gap-2 shrink-0">
-          <span className="material-symbols-outlined text-gray-900 dark:text-primary text-[22px]">account_balance</span>
-          <span className="text-sm font-semibold tracking-tight text-gray-900 dark:text-primary">CivicLens</span>
-        </Link>
-
-        {/* Nav links */}
-        <nav className="hidden md:flex items-center gap-6">
-          {links.map(({ to, label }) => (
-            <Link
-              key={to}
-              to={to}
-              className={`text-xs transition-colors duration-250 ${
-                pathname === to
-                  ? 'text-gray-900 dark:text-primary font-semibold'
-                  : 'text-gray-500 dark:text-on-surface-variant hover:text-gray-900 dark:hover:text-on-surface'
-              }`}
-            >
-              {label}
+      <div className="h-14 w-full max-w-[1200px] mx-auto liquid-glass rounded-full px-5 flex items-center justify-between border border-black/[0.06] dark:border-white/[0.12] shadow-lg">
+        {/* Left side */}
+        <div className="flex items-center gap-4">
+          <div className="flex items-center md:hidden">
+            {/* Mobile menu trigger */}
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button className="group size-8 text-gray-900 dark:text-white" variant="ghost" size="icon">
+                  <svg
+                    className="pointer-events-none stroke-current"
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path
+                      d="M4 12L20 12"
+                      className="origin-center -translate-y-[7px] transition-all duration-300 ease-[cubic-bezier(.5,.85,.25,1.1)] group-aria-expanded:translate-x-0 group-aria-expanded:translate-y-0 group-aria-expanded:rotate-[315deg]"
+                    />
+                    <path
+                      d="M4 12H20"
+                      className="origin-center transition-all duration-300 ease-[cubic-bezier(.5,.85,.25,1.8)] group-aria-expanded:rotate-45"
+                    />
+                    <path
+                      d="M4 12H20"
+                      className="origin-center translate-y-[7px] transition-all duration-300 ease-[cubic-bezier(.5,.85,.25,1.1)] group-aria-expanded:translate-y-0 group-aria-expanded:rotate-[135deg]"
+                    />
+                  </svg>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="start" className="w-40 p-1 md:hidden mt-3 bg-black/90 dark:bg-black/95 border-white/10">
+                <NavigationMenu className="max-w-none *:w-full">
+                  <NavigationMenuList className="flex-col items-start gap-0">
+                    {navigationLinks.map((link, index) => (
+                      <NavigationMenuItem key={index} className="w-full">
+                        <NavigationMenuLink
+                          href={link.href}
+                          className={`w-full px-3 py-2 rounded-md transition-colors text-white hover:bg-white/10 ${pathname === link.href ? 'bg-white/10 font-medium' : ''}`}
+                        >
+                          {link.label}
+                        </NavigationMenuLink>
+                      </NavigationMenuItem>
+                    ))}
+                  </NavigationMenuList>
+                </NavigationMenu>
+              </PopoverContent>
+            </Popover>
+          </div>
+          
+          {/* Logo & Main Nav */}
+          <div className="flex items-center gap-6">
+            <Link to="/" className="flex items-center gap-1.5 text-gray-900 dark:text-white hover:opacity-90 transition-opacity">
+              <span className="material-symbols-outlined text-[20px]">account_balance</span>
+              <span className="text-sm font-semibold tracking-tight">CivicLens</span>
             </Link>
-          ))}
-        </nav>
 
-        {/* Right CTAs */}
+            {/* Navigation menu */}
+            <NavigationMenu className="hidden md:block">
+              <NavigationMenuList className="gap-1">
+                {navigationLinks.map((link, index) => (
+                  <NavigationMenuItem key={index}>
+                    <NavigationMenuLink
+                      href={link.href}
+                      className={`px-3 py-1.5 rounded-full font-medium transition-colors text-[11px] ${
+                        pathname === link.href 
+                          ? 'text-gray-900 dark:text-white bg-black/5 dark:bg-white/10' 
+                          : 'text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-black/5 dark:hover:bg-white/5'
+                      }`}
+                    >
+                      {link.label}
+                    </NavigationMenuLink>
+                  </NavigationMenuItem>
+                ))}
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
+        </div>
+
+        {/* Right side */}
         <div className="flex items-center gap-2 shrink-0">
           <ThemeToggle />
           
-          <Link
-            to="/login?role=citizen"
-            className="hidden sm:flex items-center gap-1 bg-black/5 dark:bg-white/10 border border-black/10 dark:border-white/15 text-gray-800 dark:text-primary px-3 py-1.5 rounded-full text-[11px] font-medium hover:bg-black/10 dark:hover:bg-white/15 transition-colors"
-          >
-            <span className="material-symbols-outlined text-[13px]">person</span>
-            Citizen
-          </Link>
-          
-          <Link
-            to="/login?role=officer"
-            className="flex items-center gap-1 bg-gray-900 dark:bg-primary text-white dark:text-on-primary px-3 py-1.5 rounded-full text-[11px] font-medium hover:opacity-90 dark:hover:bg-primary-fixed transition-all"
-          >
-            <span className="material-symbols-outlined text-[13px]">shield</span>
-            Officer
-          </Link>
+          <Button asChild variant="ghost" size="sm" className="hidden sm:inline-flex text-[11px] rounded-full text-gray-800 dark:text-white hover:bg-black/5 dark:hover:bg-white/10">
+            <Link to="/login?role=citizen">Citizen Login</Link>
+          </Button>
+          <Button asChild size="sm" className="text-[11px] font-semibold bg-gray-900 text-white hover:opacity-90 dark:bg-white dark:text-black dark:hover:bg-gray-200 rounded-full shadow-md">
+            <Link to="/login?role=officer">Officer Login</Link>
+          </Button>
         </div>
       </div>
     </header>

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import { GlowCard } from '../components/ui/spotlight-card'
+import { BackgroundPixelStars } from '../components/ui/background-pixel-stars'
 
 /* ── FadeIn Component ───────────────────────────────────────── */
 function FadeIn({ 
@@ -86,18 +88,32 @@ function AnimatedHeading({ text }: { text: string }) {
   )
 }
 
-/* ── Feature Card ─────────────────────────────────────────── */
-function FeatureCard({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+/* ── Feature Glow Card Component ───────────────────────────── */
+function FeatureGlowCard({ 
+  icon, 
+  title, 
+  desc, 
+  glowColor 
+}: { 
+  icon: string
+  title: string
+  desc: string
+  glowColor: 'blue' | 'purple' | 'green' | 'red' | 'orange'
+}) {
   return (
-    <div className="bg-surface-container rounded-xl p-5 flex flex-col gap-3 group hover:bg-surface-container-high transition-colors duration-200 cursor-pointer">
-      <div className="w-9 h-9 rounded-full bg-primary flex items-center justify-center group-hover:scale-110 transition-transform duration-200">
-        <span className="material-symbols-outlined text-on-primary text-[16px]">{icon}</span>
+    <GlowCard 
+      customSize={true} 
+      glowColor={glowColor}
+      className="p-5 flex flex-col gap-3 border-none bg-white/[0.03] hover:bg-white/[0.05] transition-all duration-300 relative overflow-hidden"
+    >
+      <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center border border-white/10 shrink-0">
+        <span className="material-symbols-outlined text-white text-[15px]">{icon}</span>
       </div>
       <div>
-        <h3 className="text-sm font-semibold text-primary mb-1">{title}</h3>
-        <p className="text-xs text-on-surface-variant leading-relaxed">{desc}</p>
+        <h3 className="text-xs font-semibold text-white mb-1">{title}</h3>
+        <p className="text-[11px] text-gray-400 leading-relaxed">{desc}</p>
       </div>
-    </div>
+    </GlowCard>
   )
 }
 
@@ -113,6 +129,47 @@ function StepCard({ step, icon, title, desc }: { step: string; icon: string; tit
       </div>
       <h3 className="text-sm font-semibold text-primary mb-1">{title}</h3>
       <p className="text-xs text-on-surface-variant leading-relaxed">{desc}</p>
+    </div>
+  )
+}
+
+/* ── Department Card Component ────────────────────────────── */
+function DepartmentCard({ 
+  img, 
+  subtitle, 
+  titlePart1, 
+  titlePart2 
+}: { 
+  img: string
+  subtitle: string
+  titlePart1?: string
+  titlePart2: string
+}) {
+  return (
+    <div className="relative group overflow-hidden rounded-2xl w-full aspect-[3/4] border border-white/10 shadow-lg cursor-pointer bg-neutral-900">
+      <img
+        src={img}
+        alt={titlePart2}
+        className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 z-0"
+        onError={(e) => {
+          e.currentTarget.style.display = 'none';
+        }}
+      />
+      <div className="absolute inset-0 bg-gradient-to-br from-neutral-800 to-neutral-950 z-[-1]" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/45 to-transparent z-[1]" />
+      <div className="absolute bottom-4 left-4 right-4 flex flex-col text-left z-10">
+        <span className="text-[9px] tracking-widest text-white/50 uppercase font-semibold mb-1">
+          {subtitle}
+        </span>
+        {titlePart1 && (
+          <span className="text-xs text-white/80 font-normal leading-tight">
+            {titlePart1}
+          </span>
+        )}
+        <span className="text-sm text-white font-bold leading-tight mt-0.5">
+          {titlePart2}
+        </span>
+      </div>
     </div>
   )
 }
@@ -140,15 +197,16 @@ function Footer() {
 /* ── Main Page ────────────────────────────────────────────── */
 export default function LandingPage() {
   return (
-    <div className="dark bg-black min-h-screen flex flex-col text-white">
+    <div className="dark bg-black min-h-screen flex flex-col text-white relative">
+      <BackgroundPixelStars />
       <Navbar />
 
       {/* ═══════════════════════════════════════════════════ HERO */}
       <section className="relative w-full min-h-screen flex flex-col overflow-hidden animate-fade-in">
         
-        {/* Video Background (RAW, no overlay/dimming) */}
+        {/* Video Background (RAW, z-10 overlays on top of fixed stars z-0) */}
         <video
-          className="absolute inset-0 w-full h-full object-cover z-0"
+          className="absolute inset-0 w-full h-full object-cover z-10"
           autoPlay
           loop
           muted
@@ -156,8 +214,8 @@ export default function LandingPage() {
           src="/hero-bg.mp4"
         />
 
-        {/* Content pushed to bottom */}
-        <div className="relative z-10 flex-1 flex flex-col justify-end px-6 md:px-12 lg:px-16 pb-12 lg:pb-16 pt-28">
+        {/* Content pushed to bottom (z-20 sits on top of video) */}
+        <div className="relative z-20 flex-1 flex flex-col justify-end px-6 md:px-12 lg:px-16 pb-12 lg:pb-16 pt-28">
           <div className="max-w-[1200px] mx-auto w-full">
             <div className="lg:grid lg:grid-cols-12 lg:items-end gap-10">
 
@@ -206,35 +264,21 @@ export default function LandingPage() {
       </section>
 
       {/* ═══════════════════════════════════════════════ FEATURES */}
-      <section id="features" className="w-full bg-black py-16 px-6 md:px-12 lg:px-16">
+      <section id="features" className="relative z-20 w-full bg-transparent py-16 px-6 md:px-12 lg:px-16">
         <div className="max-w-[1200px] mx-auto">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-
-            <div className="lg:col-span-4 lg:sticky top-24">
-              <p className="text-[10px] text-white/50 uppercase tracking-widest mb-2 font-semibold">Core Focus</p>
-              <h2 className="text-2xl font-semibold text-white tracking-tight mb-2">
-                Fast &amp; clear services.
-              </h2>
-              <p className="text-xs text-gray-300 leading-relaxed">
-                We use intelligent routing to deliver citizen requests directly to the responsible IMC department, ensuring clean resolution states.
-              </p>
-            </div>
-
-            <div className="lg:col-span-8 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FeatureCard icon="water_drop"    title="Auto Routing" desc="AI classifies your issues and routes them to the correct municipal department." />
-              <FeatureCard icon="analytics"     title="Live Tracking" desc="Track the stage of your ticket in real time with SMS updates." />
-              <FeatureCard icon="merge"         title="Duplicate Detection" desc="We automatically group similar reports located in the same area." />
-              <FeatureCard icon="notifications" title="System Alerts" desc="Get instantly notified when the task force starts solving your issue." />
-              <FeatureCard icon="mic"           title="Voice Support" desc="Speak your issues in Hindi or English directly on the report card." />
-              <FeatureCard icon="location_on"   title="GPS Pinpoint" desc="Auto-locates where the incident occurred so workers arrive on target." />
-            </div>
-
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FeatureGlowCard icon="water_drop"    glowColor="blue"   title="Auto Routing" desc="AI classifies your issues and routes them to the correct municipal department." />
+            <FeatureGlowCard icon="analytics"     glowColor="purple" title="Live Tracking" desc="Track the stage of your ticket in real time with SMS updates." />
+            <FeatureGlowCard icon="merge"         glowColor="orange" title="Duplicate Detection" desc="We automatically group similar reports located in the same area." />
+            <FeatureGlowCard icon="notifications" glowColor="red"    title="System Alerts" desc="Get instantly notified when the task force starts solving your issue." />
+            <FeatureGlowCard icon="mic"           glowColor="green"  title="Voice Support" desc="Speak your issues in Hindi or English directly on the report card." />
+            <FeatureGlowCard icon="location_on"   glowColor="blue"   title="GPS Pinpoint" desc="Auto-locates where the incident occurred so workers arrive on target." />
           </div>
         </div>
       </section>
 
       {/* ═════════════════════════════════════════ HOW IT WORKS */}
-      <section id="how-it-works" className="w-full bg-[#0d0d0d] py-16 px-6 md:px-12 lg:px-16">
+      <section id="how-it-works" className="relative z-20 w-full bg-transparent py-16 px-6 md:px-12 lg:px-16">
         <div className="max-w-[1200px] mx-auto">
           <div className="mb-10 text-center">
             <p className="text-[10px] text-white/50 uppercase tracking-widest mb-2 font-semibold font-mono">Process</p>
@@ -250,39 +294,36 @@ export default function LandingPage() {
       </section>
 
       {/* ════════════════════════════════════════ DEPARTMENTS */}
-      <section className="w-full bg-black py-16 px-6 md:px-12 lg:px-16">
+      <section className="relative z-20 w-full bg-transparent py-16 px-6 md:px-12 lg:px-16">
         <div className="max-w-[1200px] mx-auto">
           <div className="mb-8">
             <p className="text-[10px] text-white/50 uppercase tracking-widest mb-2 font-semibold">Municipal Coverage</p>
-            <h2 className="text-2xl font-semibold text-white tracking-tight mb-2">13 IMC Departments Covered</h2>
-            <p className="text-xs text-gray-300 max-w-md">Our backend connects all main offices under a unified administrative workflow.</p>
+            <h2 className="text-2xl font-semibold text-white tracking-tight mb-2">16 IMC Departments &amp; Branches</h2>
+            <p className="text-xs text-gray-300 max-w-md">Our backend connects all main offices and sub-branches under a unified workflow.</p>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
-            {[
-              { icon: 'water_drop',            label: 'Water & Drainage' },
-              { icon: 'add_road',              label: 'Roads & Public Works' },
-              { icon: 'delete_forever',        label: 'Sanitation & Waste' },
-              { icon: 'lightbulb',             label: 'Streetlights' },
-              { icon: 'local_fire_department', label: 'Fire Safety' },
-              { icon: 'gavel',                 label: 'Revenue' },
-              { icon: 'computer',              label: 'IT Services' },
-              { icon: 'apartment',             label: 'Housing' },
-              { icon: 'shopping_bag',          label: 'Food & Supplies' },
-              { icon: 'school',                label: 'Education' },
-              { icon: 'balance',               label: 'Law & Administration' },
-              { icon: 'map',                   label: 'Planning' },
-            ].map(({ icon, label }) => (
-              <div key={label} className="flex items-center gap-2 bg-[#121212] rounded-xl px-4 py-3 border border-white/5">
-                <span className="material-symbols-outlined text-white text-[16px] shrink-0">{icon}</span>
-                <span className="text-xs text-white">{label}</span>
-              </div>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <DepartmentCard img="https://images.unsplash.com/photo-1508962914676-134849a727f0?auto=format&fit=crop&w=400&q=80" subtitle="INDORE" titlePart1="Water Work &amp;" titlePart2="Drainage Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1515162305285-0293e4767cc2?auto=format&fit=crop&w=400&q=80" subtitle="INFRASTRUCTURE" titlePart1="Public" titlePart2="Works Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1618477388954-7852f32655ec?auto=format&fit=crop&w=400&q=80" subtitle="INDORE" titlePart1="Health &amp; Solid Waste" titlePart2="Sanitation Management" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=400&q=80" subtitle="PUBLIC UTILITIES" titlePart1="Electrical &amp;" titlePart2="Mechanical Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1552820728-8b83bb6b773f?auto=format&fit=crop&w=400&q=80" subtitle="EMERGENCY" titlePart1="Indore" titlePart2="Fire Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=400&q=80" subtitle="IMC OFFICE" titlePart1="Taxation &amp;" titlePart2="Revenue Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1488590528505-98d2b5aba04b?auto=format&fit=crop&w=400&q=80" subtitle="DIGITAL" titlePart1="Information" titlePart2="Technology Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1545324418-cc1a3fa10c00?auto=format&fit=crop&w=400&q=80" subtitle="URBAN" titlePart1="Housing &amp;" titlePart2="Environmental Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=400&q=80" subtitle="SUPPLIES" titlePart1="Food &amp; Civil" titlePart2="Supplies Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1497633762265-9d179a990aa6?auto=format&fit=crop&w=400&q=80" subtitle="COMMUNITY" titlePart1="Municipal" titlePart2="Education Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=400&q=80" subtitle="ADMIN" titlePart1="Law &amp; General" titlePart2="Administration Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=400&q=80" subtitle="URBAN PLANNING" titlePart1="Planning &amp;" titlePart2="Rehabilitation Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=400&q=80" subtitle="FINANCE" titlePart1="Audits &amp;" titlePart2="Accounts Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1541888946425-d81bb19240f5?auto=format&fit=crop&w=400&q=80" subtitle="SUB BRANCH" titlePart1="Encroachment" titlePart2="Removal Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1534567153574-2b12153a87f0?auto=format&fit=crop&w=400&q=80" subtitle="SUB BRANCH" titlePart1="Kamla Nehru" titlePart2="Zoo Department" />
+            <DepartmentCard img="https://images.unsplash.com/photo-1519331379826-f10be5486c6f?auto=format&fit=crop&w=400&q=80" subtitle="SUB BRANCH" titlePart1="Garden Department &amp;" titlePart2="Regional Park" />
           </div>
         </div>
       </section>
 
       {/* ═════════════════════════════════════════════ CTA BAND */}
-      <section className="w-full bg-white text-black py-12 px-6 md:px-12 lg:px-16">
+      <section className="relative z-20 w-full bg-white text-black py-12 px-6 md:px-12 lg:px-16">
         <div className="max-w-[1200px] mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div>
             <h2 className="text-xl font-bold tracking-tight">Help Indore remain the cleanest city.</h2>
@@ -301,3 +342,4 @@ export default function LandingPage() {
     </div>
   )
 }
+

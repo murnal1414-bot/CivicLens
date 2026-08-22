@@ -1,4 +1,6 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import Lenis from 'lenis'
 import LandingPage from './pages/LandingPage'
 import CitizenPage from './pages/CitizenPage'
 import GovOverviewPage from './pages/GovOverviewPage'
@@ -9,6 +11,29 @@ import LoginPage from './pages/LoginPage'
 import './index.css'
 
 export default function App() {
+  useEffect(() => {
+    const lenis = new Lenis({
+      duration: 1.2,
+      easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
+      orientation: 'vertical',
+      gestureOrientation: 'vertical',
+      smoothWheel: true,
+    })
+
+    let rafId: number
+    function raf(time: number) {
+      lenis.raf(time)
+      rafId = requestAnimationFrame(raf)
+    }
+
+    rafId = requestAnimationFrame(raf)
+
+    return () => {
+      lenis.destroy()
+      cancelAnimationFrame(rafId)
+    }
+  }, [])
+
   return (
     <BrowserRouter>
       <Routes>
