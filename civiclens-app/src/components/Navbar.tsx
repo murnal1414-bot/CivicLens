@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import ThemeToggle from './ThemeToggle'
 import { Button } from "./ui/button"
@@ -19,6 +19,36 @@ export default function Navbar() {
   const { pathname } = useLocation()
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [sessionEmail, setSessionEmail] = useState('')
+
+  const lastPathname = useRef(pathname)
+  useEffect(() => {
+    if (lastPathname.current !== pathname) {
+      lastPathname.current = pathname
+      const hasTranslation = document.cookie.includes('googtrans=') && !document.cookie.includes('googtrans=/en/en')
+      if (hasTranslation) {
+        window.location.reload()
+      }
+    }
+  }, [pathname])
+
+  useEffect(() => {
+    // MutationObserver to permanently hide and remove Google Translate iframe banner and top padding
+    const observer = new MutationObserver(() => {
+      const frames = document.querySelectorAll('iframe.goog-te-banner-frame, .goog-te-banner-frame, iframe[class*="goog-te-banner"]')
+      frames.forEach((f: any) => {
+        f.style.display = 'none'
+        f.style.visibility = 'hidden'
+        f.style.height = '0px'
+        f.style.opacity = '0'
+      })
+      if (document.body.style.top !== '0px') {
+        document.body.style.top = '0px'
+      }
+    })
+    
+    observer.observe(document.body, { childList: true, subtree: true })
+    return () => observer.disconnect()
+  }, [])
 
   useEffect(() => {
     const checkAuth = async () => {
