@@ -427,7 +427,7 @@ export const civiclensApi = {
       id,
       date: dateStr,
       status: initialStatus,
-      slaRemaining: initialStatus === 'PENDING_VERIFICATION' ? 'Awaiting Verification' : '23h 59m left',
+      slaRemaining: initialStatus === 'REJECTED' ? 'Rejected by AI' : '23h 59m left',
       slaTotal: 'Limit: 24 hours',
       initials: complaint.assignee ? complaint.assignee.split(' ').map(n => n[0]).join('').toUpperCase() : ''
     }
