@@ -6,6 +6,7 @@ const navItems = [
   { path: '/gov/overview',   label: 'Overview',    icon: 'dashboard' },
   { path: '/gov/complaints', label: 'Complaints',  icon: 'list_alt' },
   { path: '/gov/departments',label: 'Departments', icon: 'corporate_fare' },
+  { path: '/gov/workers',    label: 'Workers',     icon: 'badge' },
   { path: '/gov/analytics',  label: 'Analytics',   icon: 'monitoring' },
 ]
 

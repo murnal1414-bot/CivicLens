@@ -7,6 +7,7 @@ import GovOverviewPage from './pages/GovOverviewPage'
 import GovComplaintsPage from './pages/GovComplaintsPage'
 import GovAnalyticsPage from './pages/GovAnalyticsPage'
 import GovDepartmentsPage from './pages/GovDepartmentsPage'
+import GovWorkersPage from './pages/GovWorkersPage'
 import LoginPage from './pages/LoginPage'
 import ProtectedRoute from './components/ProtectedRoute'
 import CitizenDashboardPage from './pages/CitizenDashboardPage'
@@ -50,6 +51,7 @@ export default function App() {
           <Route path="/gov/complaints" element={<GovComplaintsPage />} />
           <Route path="/gov/analytics" element={<GovAnalyticsPage />} />
           <Route path="/gov/departments" element={<GovDepartmentsPage />} />
+          <Route path="/gov/workers" element={<GovWorkersPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

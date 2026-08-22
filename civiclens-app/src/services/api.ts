@@ -58,6 +58,17 @@ export type Department = {
   onTimeRate: number
 }
 
+export type Worker = {
+  id: string
+  name: string
+  role: 'OFFICER' | 'STAFF'
+  department: string
+  parentId?: string
+  status: 'Active' | 'On Leave' | 'Busy'
+  phone: string
+  tasksCount: number
+}
+
 // Initial mock complaints
 const DEFAULT_COMPLAINTS: Complaint[] = [
   { 
@@ -125,6 +136,104 @@ const DEFAULT_DEPARTMENTS: Department[] = [
   { id: 'DEPT-14', name: 'Removal Department', icon: 'delete_sweep', activeIssues: 9, workersCount: 20, status: 'Active', avgFixTime: '12h', onTimeRate: 91 },
   { id: 'DEPT-15', name: 'Zoo Department', icon: 'pets', activeIssues: 3, workersCount: 15, status: 'Active', avgFixTime: '6h', onTimeRate: 97 },
   { id: 'DEPT-16', name: 'Garden Department & Regional Park', icon: 'forest', activeIssues: 12, workersCount: 14, status: 'Active', avgFixTime: '18h', onTimeRate: 90 },
+]
+
+const DEFAULT_WORKERS: Worker[] = [
+  // 1. Water Work and Drainage Department
+  { id: 'OFF-01', name: 'A. Sharma', role: 'OFFICER', department: 'Water Work and Drainage Department', phone: '+91 98260 11111', status: 'Active', tasksCount: 1 },
+  { id: 'STF-01-1', name: 'K. Rawat', role: 'STAFF', department: 'Water Work and Drainage Department', parentId: 'OFF-01', phone: '+91 98260 11112', status: 'Active', tasksCount: 0 },
+  { id: 'STF-01-2', name: 'J. Patel', role: 'STAFF', department: 'Water Work and Drainage Department', parentId: 'OFF-01', phone: '+91 98260 11113', status: 'Active', tasksCount: 0 },
+  { id: 'STF-01-3', name: 'P. Verma', role: 'STAFF', department: 'Water Work and Drainage Department', parentId: 'OFF-01', phone: '+91 98260 11114', status: 'On Leave', tasksCount: 0 },
+
+  // 2. Public Work Department
+  { id: 'OFF-02', name: 'R. Mehta', role: 'OFFICER', department: 'Public Work Department', phone: '+91 98260 22222', status: 'Active', tasksCount: 0 },
+  { id: 'STF-02-1', name: 'M. Singh', role: 'STAFF', department: 'Public Work Department', parentId: 'OFF-02', phone: '+91 98260 22223', status: 'Active', tasksCount: 1 },
+  { id: 'STF-02-2', name: 'S. Yadav', role: 'STAFF', department: 'Public Work Department', parentId: 'OFF-02', phone: '+91 98260 22224', status: 'Active', tasksCount: 0 },
+  { id: 'STF-02-3', name: 'K. Chouhan', role: 'STAFF', department: 'Public Work Department', parentId: 'OFF-02', phone: '+91 98260 22225', status: 'Busy', tasksCount: 0 },
+
+  // 3. Health Department (Sanitation and Solid Waste Management)
+  { id: 'OFF-03', name: 'Dr. A. Saxena', role: 'OFFICER', department: 'Health Department (Sanitation and Solid Waste Management)', phone: '+91 98260 33333', status: 'Active', tasksCount: 0 },
+  { id: 'STF-03-1', name: 'D. Mishra', role: 'STAFF', department: 'Health Department (Sanitation and Solid Waste Management)', parentId: 'OFF-03', phone: '+91 98260 33334', status: 'Active', tasksCount: 0 },
+  { id: 'STF-03-2', name: 'S. Choudhary', role: 'STAFF', department: 'Health Department (Sanitation and Solid Waste Management)', parentId: 'OFF-03', phone: '+91 98260 33335', status: 'Active', tasksCount: 0 },
+  { id: 'STF-03-3', name: 'R. Solanki', role: 'STAFF', department: 'Health Department (Sanitation and Solid Waste Management)', parentId: 'OFF-03', phone: '+91 98260 33336', status: 'Busy', tasksCount: 0 },
+
+  // 4. Electrical and Mechanical Department
+  { id: 'OFF-04', name: 'H. Pathak', role: 'OFFICER', department: 'Electrical and Mechanical Department', phone: '+91 98260 44444', status: 'Active', tasksCount: 0 },
+  { id: 'STF-04-1', name: 'N. Gehlot', role: 'STAFF', department: 'Electrical and Mechanical Department', parentId: 'OFF-04', phone: '+91 98260 44445', status: 'Active', tasksCount: 0 },
+  { id: 'STF-04-2', name: 'T. Joshi', role: 'STAFF', department: 'Electrical and Mechanical Department', parentId: 'OFF-04', phone: '+91 98260 44446', status: 'Active', tasksCount: 0 },
+  { id: 'STF-04-3', name: 'V. Sen', role: 'STAFF', department: 'Electrical and Mechanical Department', parentId: 'OFF-04', phone: '+91 98260 44447', status: 'On Leave', tasksCount: 0 },
+
+  // 5. Fire Department
+  { id: 'OFF-05', name: 'F. Khan', role: 'OFFICER', department: 'Fire Department', phone: '+91 98260 55555', status: 'Active', tasksCount: 0 },
+  { id: 'STF-05-1', name: 'A. Qureshi', role: 'STAFF', department: 'Fire Department', parentId: 'OFF-05', phone: '+91 98260 55556', status: 'Active', tasksCount: 0 },
+  { id: 'STF-05-2', name: 'Z. Ahmed', role: 'STAFF', department: 'Fire Department', parentId: 'OFF-05', phone: '+91 98260 55557', status: 'Active', tasksCount: 0 },
+  { id: 'STF-05-3', name: 'S. Sheikh', role: 'STAFF', department: 'Fire Department', parentId: 'OFF-05', phone: '+91 98260 55558', status: 'Active', tasksCount: 0 },
+
+  // 6. Revenue Department
+  { id: 'OFF-06', name: 'S. Deshpande', role: 'OFFICER', department: 'Revenue Department', phone: '+91 98260 66666', status: 'Active', tasksCount: 0 },
+  { id: 'STF-06-1', name: 'P. Joshi', role: 'STAFF', department: 'Revenue Department', parentId: 'OFF-06', phone: '+91 98260 66667', status: 'Active', tasksCount: 0 },
+  { id: 'STF-06-2', name: 'M. Kulkarni', role: 'STAFF', department: 'Revenue Department', parentId: 'OFF-06', phone: '+91 98260 66668', status: 'Active', tasksCount: 0 },
+  { id: 'STF-06-3', name: 'A. Shinde', role: 'STAFF', department: 'Revenue Department', parentId: 'OFF-06', phone: '+91 98260 66669', status: 'Active', tasksCount: 0 },
+
+  // 7. Information Technology Department
+  { id: 'OFF-07', name: 'T. Srinivas', role: 'OFFICER', department: 'Information Technology Department', phone: '+91 98260 77777', status: 'Active', tasksCount: 0 },
+  { id: 'STF-07-1', name: 'R. Nair', role: 'STAFF', department: 'Information Technology Department', parentId: 'OFF-07', phone: '+91 98260 77778', status: 'Active', tasksCount: 0 },
+  { id: 'STF-07-2', name: 'S. Pillai', role: 'STAFF', department: 'Information Technology Department', parentId: 'OFF-07', phone: '+91 98260 77779', status: 'Active', tasksCount: 0 },
+  { id: 'STF-07-3', name: 'V. Menon', role: 'STAFF', department: 'Information Technology Department', parentId: 'OFF-07', phone: '+91 98260 77780', status: 'Active', tasksCount: 0 },
+
+  // 8. Housing & Environmental Department
+  { id: 'OFF-08', name: 'V. Chaturvedi', role: 'OFFICER', department: 'Housing & Environmental Department', phone: '+91 98260 88888', status: 'Active', tasksCount: 0 },
+  { id: 'STF-08-1', name: 'R. Tiwari', role: 'STAFF', department: 'Housing & Environmental Department', parentId: 'OFF-08', phone: '+91 98260 88889', status: 'Active', tasksCount: 0 },
+  { id: 'STF-08-2', name: 'A. Dwivedi', role: 'STAFF', department: 'Housing & Environmental Department', parentId: 'OFF-08', phone: '+91 98260 88890', status: 'Active', tasksCount: 0 },
+  { id: 'STF-08-3', name: 'G. Pandey', role: 'STAFF', department: 'Housing & Environmental Department', parentId: 'OFF-08', phone: '+91 98260 88891', status: 'Active', tasksCount: 0 },
+
+  // 9. Food and Civil Supplies Department
+  { id: 'OFF-09', name: 'S. Mittal', role: 'OFFICER', department: 'Food and Civil Supplies Department', phone: '+91 98260 99999', status: 'Active', tasksCount: 0 },
+  { id: 'STF-09-1', name: 'P. Bansal', role: 'STAFF', department: 'Food and Civil Supplies Department', parentId: 'OFF-09', phone: '+91 98260 99991', status: 'Active', tasksCount: 0 },
+  { id: 'STF-09-2', name: 'A. Gupta', role: 'STAFF', department: 'Food and Civil Supplies Department', parentId: 'OFF-09', phone: '+91 98260 99992', status: 'Active', tasksCount: 0 },
+  { id: 'STF-09-3', name: 'M. Garg', role: 'STAFF', department: 'Food and Civil Supplies Department', parentId: 'OFF-09', phone: '+91 98260 99993', status: 'Active', tasksCount: 0 },
+
+  // 10. Education Department
+  { id: 'OFF-10', name: 'M. Sahu', role: 'OFFICER', department: 'Education Department', phone: '+91 98260 10101', status: 'Active', tasksCount: 0 },
+  { id: 'STF-10-1', name: 'K. Rathore', role: 'STAFF', department: 'Education Department', parentId: 'OFF-10', phone: '+91 98260 10102', status: 'Active', tasksCount: 0 },
+  { id: 'STF-10-2', name: 'D. Sisodia', role: 'STAFF', department: 'Education Department', parentId: 'OFF-10', phone: '+91 98260 10103', status: 'Active', tasksCount: 0 },
+  { id: 'STF-10-3', name: 'N. Rajput', role: 'STAFF', department: 'Education Department', parentId: 'OFF-10', phone: '+91 98260 10104', status: 'Active', tasksCount: 0 },
+
+  // 11. Law and General Administration Department
+  { id: 'OFF-11', name: 'Adv. R. C. Joshi', role: 'OFFICER', department: 'Law and General Administration Department', phone: '+91 98260 20202', status: 'Active', tasksCount: 0 },
+  { id: 'STF-11-1', name: 'P. Dube', role: 'STAFF', department: 'Law and General Administration Department', parentId: 'OFF-11', phone: '+91 98260 20203', status: 'Active', tasksCount: 0 },
+  { id: 'STF-11-2', name: 'A. Bhargava', role: 'STAFF', department: 'Law and General Administration Department', parentId: 'OFF-11', phone: '+91 98260 20204', status: 'Active', tasksCount: 0 },
+  { id: 'STF-11-3', name: 'J. Tripathi', role: 'STAFF', department: 'Law and General Administration Department', parentId: 'OFF-11', phone: '+91 98260 20205', status: 'Active', tasksCount: 0 },
+
+  // 12. Planning & Rehabilitation Department
+  { id: 'OFF-12', name: 'K. Vijayvargiya', role: 'OFFICER', department: 'Planning & Rehabilitation Department', phone: '+91 98260 30303', status: 'Active', tasksCount: 0 },
+  { id: 'STF-12-1', name: 'S. Patidar', role: 'STAFF', department: 'Planning & Rehabilitation Department', parentId: 'OFF-12', phone: '+91 98260 30304', status: 'Active', tasksCount: 0 },
+  { id: 'STF-12-2', name: 'Y. Chouhan', role: 'STAFF', department: 'Planning & Rehabilitation Department', parentId: 'OFF-12', phone: '+91 98260 30305', status: 'Active', tasksCount: 0 },
+  { id: 'STF-12-3', name: 'L. Raghuvanshi', role: 'STAFF', department: 'Planning & Rehabilitation Department', parentId: 'OFF-12', phone: '+91 98260 30306', status: 'Active', tasksCount: 0 },
+
+  // 13. Accounts Department
+  { id: 'OFF-13', name: 'CA R. Jaiswal', role: 'OFFICER', department: 'Accounts Department', phone: '+91 98260 40404', status: 'Active', tasksCount: 0 },
+  { id: 'STF-13-1', name: 'A. Agrawal', role: 'STAFF', department: 'Accounts Department', parentId: 'OFF-13', phone: '+91 98260 40405', status: 'Active', tasksCount: 0 },
+  { id: 'STF-13-2', name: 'S. Maheshwari', role: 'STAFF', department: 'Accounts Department', parentId: 'OFF-13', phone: '+91 98260 40406', status: 'Active', tasksCount: 0 },
+  { id: 'STF-13-3', name: 'R. Porwal', role: 'STAFF', department: 'Accounts Department', parentId: 'OFF-13', phone: '+91 98260 40407', status: 'Active', tasksCount: 0 },
+
+  // 14. Removal Department
+  { id: 'OFF-14', name: 'R. Verma', role: 'OFFICER', department: 'Removal Department', phone: '+91 98260 50505', status: 'Active', tasksCount: 0 },
+  { id: 'STF-14-1', name: 'G. Kushwah', role: 'STAFF', department: 'Removal Department', parentId: 'OFF-14', phone: '+91 98260 50506', status: 'Active', tasksCount: 0 },
+  { id: 'STF-14-2', name: 'P. Malviya', role: 'STAFF', department: 'Removal Department', parentId: 'OFF-14', phone: '+91 98260 50507', status: 'Active', tasksCount: 0 },
+  { id: 'STF-14-3', name: 'J. Solanki', role: 'STAFF', department: 'Removal Department', parentId: 'OFF-14', phone: '+91 98260 50508', status: 'Active', tasksCount: 0 },
+
+  // 15. Zoo Department
+  { id: 'OFF-15', name: 'Dr. N. Yadav', role: 'OFFICER', department: 'Zoo Department', phone: '+91 98260 60606', status: 'Active', tasksCount: 0 },
+  { id: 'STF-15-1', name: 'A. Malviya', role: 'STAFF', department: 'Zoo Department', parentId: 'OFF-15', phone: '+91 98260 60607', status: 'Active', tasksCount: 0 },
+  { id: 'STF-15-2', name: 'R. Mewada', role: 'STAFF', department: 'Zoo Department', parentId: 'OFF-15', phone: '+91 98260 60608', status: 'Active', tasksCount: 0 },
+  { id: 'STF-15-3', name: 'D. Bhalerao', role: 'STAFF', department: 'Zoo Department', parentId: 'OFF-15', phone: '+91 98260 60609', status: 'Active', tasksCount: 0 },
+
+  // 16. Garden Department & Regional Park
+  { id: 'OFF-16', name: 'M. Chouhan', role: 'OFFICER', department: 'Garden Department & Regional Park', phone: '+91 98260 70707', status: 'Active', tasksCount: 0 },
+  { id: 'STF-16-1', name: 'S. Panwar', role: 'STAFF', department: 'Garden Department & Regional Park', parentId: 'OFF-16', phone: '+91 98260 70708', status: 'Active', tasksCount: 0 },
+  { id: 'STF-16-2', name: 'R. Thakur', role: 'STAFF', department: 'Garden Department & Regional Park', parentId: 'OFF-16', phone: '+91 98260 70709', status: 'Active', tasksCount: 0 },
+  { id: 'STF-16-3', name: 'L. Gehlot', role: 'STAFF', department: 'Garden Department & Regional Park', parentId: 'OFF-16', phone: '+91 98260 70710', status: 'Active', tasksCount: 0 },
 ]
 
 // Helper function to cluster active complaints by area
@@ -356,6 +465,8 @@ export const civiclensApi = {
     const index = localList.findIndex((c: any) => c.id === id);
     if (index !== -1) {
       const original = localList[index];
+      
+      // Update department issues count on resolution
       if (updates.status === 'RESOLVED' && original.status !== 'RESOLVED') {
         const depts = this.getDepartments();
         const targetDept = depts.find(d => d.name.toLowerCase().includes(original.category.toLowerCase()) || original.category.toLowerCase().includes(d.name.toLowerCase()));
@@ -363,6 +474,38 @@ export const civiclensApi = {
           targetDept.activeIssues = Math.max(0, targetDept.activeIssues - 1);
           localStorage.setItem('civiclens_departments', JSON.stringify(depts));
         }
+
+        // Decrement task count of the assignee
+        if (original.assignee) {
+          const workers = this.getWorkers();
+          const worker = workers.find(w => w.name.toLowerCase() === original.assignee.toLowerCase());
+          if (worker) {
+            worker.tasksCount = Math.max(0, worker.tasksCount - 1);
+            localStorage.setItem('civiclens_workers', JSON.stringify(workers));
+          }
+        }
+      }
+
+      // Update worker tasks counts when assignee changes
+      if (updates.assignee && updates.assignee !== original.assignee) {
+        const newAssignee = updates.assignee;
+        const workers = this.getWorkers();
+        
+        // Decrement old assignee if existed
+        if (original.assignee) {
+          const oldWorker = workers.find(w => w.name.toLowerCase() === original.assignee.toLowerCase());
+          if (oldWorker) {
+            oldWorker.tasksCount = Math.max(0, oldWorker.tasksCount - 1);
+          }
+        }
+
+        // Increment new assignee
+        const newWorker = workers.find(w => w.name.toLowerCase() === newAssignee.toLowerCase());
+        if (newWorker) {
+          newWorker.tasksCount += 1;
+        }
+
+        localStorage.setItem('civiclens_workers', JSON.stringify(workers));
       }
 
       localList[index] = { ...original, ...updates };
@@ -387,6 +530,30 @@ export const civiclensApi = {
     if (index !== -1) {
       list[index] = { ...list[index]!, ...updates }
       localStorage.setItem('civiclens_departments', JSON.stringify(list))
+    }
+    return list
+  },
+
+  getWorkers(): Worker[] {
+    const data = localStorage.getItem('civiclens_workers')
+    if (!data || JSON.parse(data).length !== 64) {
+      localStorage.setItem('civiclens_workers', JSON.stringify(DEFAULT_WORKERS))
+      return DEFAULT_WORKERS
+    }
+    return JSON.parse(data)
+  },
+
+  getWorkersByDepartment(deptName: string): Worker[] {
+    const list = this.getWorkers()
+    return list.filter(w => w.department.toLowerCase() === deptName.toLowerCase())
+  },
+
+  updateWorker(id: string, updates: Partial<Worker>): Worker[] {
+    const list = this.getWorkers()
+    const index = list.findIndex(w => w.id === id)
+    if (index !== -1) {
+      list[index] = { ...list[index]!, ...updates }
+      localStorage.setItem('civiclens_workers', JSON.stringify(list))
     }
     return list
   },

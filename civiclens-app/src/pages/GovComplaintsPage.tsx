@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import GovSidebar from '../components/GovSidebar'
 import { civiclensApi } from '../services/api'
-import type { Complaint } from '../services/api'
+import type { Complaint, Worker } from '../services/api'
 import { runAnalystAgent, runReasoningAgent, runVisionCheckAgent } from '../services/ai'
 import { supabase } from '../services/supabase'
 import UniqueLoading from '@/components/ui/morph-loading'
@@ -44,6 +44,8 @@ export default function GovComplaintsPage() {
   const [analystData, setAnalystData] = useState<{ impact: string; complexity: 'Low' | 'Medium' | 'High'; complexityReason: string; steps: string[] } | null>(null)
   const [reasoningData, setReasoningData] = useState<{ safetyHazards: string; suggestedSla: string; reasoning: string } | null>(null)
   const [visionData, setVisionData] = useState<{ isMatch: boolean; matchPercentage: number; explanation: string } | null>(null)
+  const [workers, setWorkers] = useState<Worker[]>([])
+  const [selectedStaffName, setSelectedStaffName] = useState<string>('')
 
   const [officerName, setOfficerName] = useState('Municipal Officer')
   const [officerEmail, setOfficerEmail] = useState('')
@@ -73,6 +75,8 @@ export default function GovComplaintsPage() {
       setComplaints(data)
       const vers = await civiclensApi.getVerifications()
       setVerifications(vers)
+      const workersData = civiclensApi.getWorkers()
+      setWorkers(workersData)
       if (data.length > 0 && !selectedId) {
         setSelected(data[0].id)
       }
@@ -140,6 +144,10 @@ export default function GovComplaintsPage() {
 
   const selected = complaints.find(c => c.id === selectedId)
 
+  useEffect(() => {
+    setSelectedStaffName('')
+  }, [selectedId])
+
   // Handle assigning/resolving complaints
   const handleAssign = async (id: string, name: string) => {
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
@@ -149,6 +157,7 @@ export default function GovComplaintsPage() {
       initials 
     })
     setComplaints(updated)
+    setWorkers(civiclensApi.getWorkers())
   }
 
   const handleResolve = async (id: string) => {
@@ -157,6 +166,7 @@ export default function GovComplaintsPage() {
       slaRemaining: 'Resolved on time'
     })
     setComplaints(updated)
+    setWorkers(civiclensApi.getWorkers())
   }
 
   const handleAcceptVerification = async (id: string) => {
@@ -689,14 +699,44 @@ export default function GovComplaintsPage() {
 
                           {/* Actions */}
                           <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-white/[0.06]">
-                            {selected.status === 'OPEN' && (
-                              <button 
-                                onClick={() => handleAssign(selected.id, 'R. Verma')}
-                                className="w-full py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 transition-all"
-                              >
-                                Assign Crew (R. Verma)
-                              </button>
-                            )}
+                            {selected.status === 'OPEN' && (() => {
+                              const deptStaff = workers.filter(
+                                w => w.role === 'STAFF' && 
+                                w.department.toLowerCase() === selected.category.toLowerCase()
+                              )
+                              const displayStaff = deptStaff.length > 0 
+                                ? deptStaff 
+                                : workers.filter(w => w.role === 'STAFF')
+
+                              return (
+                                <div className="flex flex-col gap-2 bg-surface-container-lowest/50 p-2.5 rounded-lg border border-white/5 text-left">
+                                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Assign to Field Staff</span>
+                                  <div className="relative text-xs">
+                                    <select
+                                      value={selectedStaffName}
+                                      onChange={e => setSelectedStaffName(e.target.value)}
+                                      className="w-full appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-2 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                                    >
+                                      <option value="">-- Choose Field Staff --</option>
+                                      {displayStaff.map(s => (
+                                        <option key={s.id} value={s.name} disabled={s.status === 'On Leave'}>
+                                          {s.name} ({s.tasksCount} task{s.tasksCount !== 1 ? 's' : ''} · {s.status})
+                                        </option>
+                                      ))}
+                                    </select>
+                                    <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
+                                  </div>
+                                  <button
+                                    onClick={() => handleAssign(selected.id, selectedStaffName)}
+                                    disabled={!selectedStaffName}
+                                    className="w-full py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+                                  >
+                                    <span className="material-symbols-outlined text-[15px]">assignment_turned_in</span>
+                                    Assign Task
+                                  </button>
+                                </div>
+                              )
+                            })()}
                             {selected.status === 'ASSIGNED' && (
                               <button 
                                 onClick={() => handleResolve(selected.id)}
