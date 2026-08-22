@@ -561,8 +561,8 @@ export default function CitizenPage() {
                 </div>
 
                 {/* Map container */}
-                <div className="relative w-full h-52 rounded-xl overflow-hidden border border-white/10 bg-surface-container hover:border-primary/30 transition-all duration-300 z-10">
-                  <div ref={mapRef} className="w-full h-full text-black" style={{ minHeight: '200px' }} />
+                <div className="relative w-full rounded-xl overflow-hidden border border-white/10 bg-surface-container hover:border-primary/30 transition-all duration-300 z-10" style={{ height: '220px' }}>
+                  <div ref={mapRef} style={{ width: '100%', height: '100%' }} className="text-black" />
                   <button
                     onClick={getLocation}
                     title="Use my current location"

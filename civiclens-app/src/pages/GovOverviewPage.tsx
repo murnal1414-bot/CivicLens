@@ -197,7 +197,10 @@ export default function GovOverviewPage() {
     })
 
     return () => {
-      // clean up handled automatically or on destroy
+      if (mapInstance.current) {
+        mapInstance.current.remove()
+        mapInstance.current = null
+      }
     }
   }, [complaintsList])
 
@@ -329,9 +332,9 @@ export default function GovOverviewPage() {
             </div>
 
             {/* Live map card */}
-            <div className="lg:col-span-4 bg-surface-container-low/40 border border-white/5 rounded-2xl p-4 flex flex-col min-h-[300px] relative overflow-hidden group z-10">
+            <div className="lg:col-span-4 bg-surface-container-low/40 border border-white/5 rounded-2xl p-4 flex flex-col relative overflow-hidden group z-10" style={{ height: '320px' }}>
               <div className="absolute inset-0 z-0">
-                <div ref={mapRef} className="w-full h-full text-black" style={{ minHeight: '300px' }} />
+                <div ref={mapRef} style={{ width: '100%', height: '100%' }} className="text-black" />
               </div>
               <div className="relative z-10 flex justify-between items-start pointer-events-none">
                 <span className="px-2.5 py-1 bg-background/90 border border-white/10 rounded-full text-[9px] text-on-surface uppercase tracking-widest font-semibold flex items-center gap-1.5 shadow-lg">
