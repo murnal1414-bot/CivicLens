@@ -1081,12 +1081,12 @@ export default function CitizenPage() {
                   
                   <h2 className="text-base font-semibold text-on-surface">
                     {verificationResult.riskLevel === 'HIGH' 
-                      ? 'Evidence Requires Verification' 
+                      ? 'Evidence Rejected' 
                       : 'Evidence Verified'}
                   </h2>
                   <p className="text-xs text-on-surface-variant mt-1">
                     {verificationResult.riskLevel === 'HIGH'
-                      ? 'We could not confidently verify the reported issue.'
+                      ? 'Your image does not match the reported issue. The complaint will be automatically rejected.'
                       : 'Your image appears consistent with the reported issue.'}
                   </p>
                 </div>
@@ -1120,7 +1120,7 @@ export default function CitizenPage() {
 
                 <p className="text-[11px] text-on-surface-variant/70 leading-relaxed mb-6 text-center">
                   {verificationResult.riskLevel === 'HIGH'
-                    ? 'Your complaint can still be submitted and will be reviewed by a government administrator before crew assignment.'
+                    ? 'Your complaint does not meet the visual verification standards and will be submitted as REJECTED. It will be logged in the AI Verification Queue for audit.'
                     : 'Your complaint matches all signals and will be processed immediately.'}
                 </p>
 
@@ -1135,7 +1135,7 @@ export default function CitizenPage() {
                     onClick={submit} 
                     className="flex-1 btn-primary py-2 rounded-xl text-xs font-semibold shadow-lg hover:opacity-95 transition-all"
                   >
-                    {verificationResult.riskLevel === 'HIGH' ? 'Continue Submission' : 'Submit Complaint'}
+                    {verificationResult.riskLevel === 'HIGH' ? 'Submit as Rejected' : 'Submit Complaint'}
                   </button>
                 </div>
               </div>

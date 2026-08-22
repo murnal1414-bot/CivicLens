@@ -414,11 +414,11 @@ export const civiclensApi = {
           complaint.capturedAt
         )
         if (verification.riskLevel === 'HIGH') {
-          initialStatus = 'PENDING_VERIFICATION'
+          initialStatus = 'REJECTED'
         }
       } catch (e) {
         console.error("AI Evidence Verification failed, placing in review queue:", e)
-        initialStatus = 'PENDING_VERIFICATION'
+        initialStatus = 'REJECTED'
       }
     }
 

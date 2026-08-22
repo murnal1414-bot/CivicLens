@@ -299,7 +299,7 @@ export default function GovComplaintsPage() {
     const matchesDept = selectedDept === 'All Departments' || c.category === selectedDept
     
     const matchesTab = activeTab === 'verification' 
-      ? c.status === 'PENDING_VERIFICATION' 
+      ? (c.status === 'PENDING_VERIFICATION' || c.status === 'REJECTED')
       : (c.status !== 'PENDING_VERIFICATION' && c.status !== 'REJECTED')
       
     return matchesSearch && matchesDept && matchesTab
@@ -385,9 +385,9 @@ export default function GovComplaintsPage() {
               >
                 <span className="material-symbols-outlined text-[16px]">psychology</span>
                 AI Verification Queue
-                {complaints.filter(c => c.status === 'PENDING_VERIFICATION').length > 0 && (
+                {complaints.filter(c => c.status === 'PENDING_VERIFICATION' || c.status === 'REJECTED').length > 0 && (
                   <span className="bg-error text-white font-bold text-[9px] px-1.5 py-0.5 rounded-full">
-                    {complaints.filter(c => c.status === 'PENDING_VERIFICATION').length}
+                    {complaints.filter(c => c.status === 'PENDING_VERIFICATION' || c.status === 'REJECTED').length}
                   </span>
                 )}
               </button>
