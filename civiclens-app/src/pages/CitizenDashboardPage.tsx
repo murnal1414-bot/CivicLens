@@ -369,6 +369,18 @@ export default function CitizenDashboardPage() {
                           </span>
                         </div>
                       )}
+                      {c.dispatchTime && (
+                        <div className="flex justify-between py-1 border-b border-white/5">
+                          <span className="text-on-surface-variant">Dispatch Date/Time</span>
+                          <span className="font-semibold text-on-surface">{new Date(c.dispatchTime).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      )}
+                      {c.estimatedSolutionDate && (
+                        <div className="flex justify-between py-1 border-b border-white/5">
+                          <span className="text-on-surface-variant">Est. Fix Target Date</span>
+                          <span className="font-semibold text-primary">{new Date(c.estimatedSolutionDate).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                        </div>
+                      )}
                     </>
                   ) : null}
 

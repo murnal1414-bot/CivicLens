@@ -26,6 +26,8 @@ export type Complaint = {
   latitude?: number
   longitude?: number
   capturedAt?: string // Camera capture timestamp
+  estimatedSolutionDate?: string
+  dispatchTime?: string
 }
 
 export type ComplaintVerification = {

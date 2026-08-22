@@ -46,6 +46,9 @@ export default function GovComplaintsPage() {
   const [visionData, setVisionData] = useState<{ isMatch: boolean; matchPercentage: number; explanation: string } | null>(null)
   const [workers, setWorkers] = useState<Worker[]>([])
   const [selectedStaffName, setSelectedStaffName] = useState<string>('')
+  const [manualDispatchTime, setManualDispatchTime] = useState('')
+  const [manualSolutionTime, setManualSolutionTime] = useState('')
+  const [manualPriority, setManualPriority] = useState<'CRITICAL' | 'HIGH' | 'MEDIUM'>('MEDIUM')
 
   const [officerName, setOfficerName] = useState('Municipal Officer')
   const [officerEmail, setOfficerEmail] = useState('')
@@ -146,15 +149,40 @@ export default function GovComplaintsPage() {
 
   useEffect(() => {
     setSelectedStaffName('')
-  }, [selectedId])
+    if (selected) {
+      const now = new Date()
+      const offset = now.getTimezoneOffset()
+      const localNow = new Date(now.getTime() - offset * 60 * 1000)
+      setManualDispatchTime(localNow.toISOString().slice(0, 16))
 
-  // Handle assigning/resolving complaints
+      const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+      const localTomorrow = new Date(tomorrow.getTime() - offset * 60 * 1000)
+      setManualSolutionTime(localTomorrow.toISOString().slice(0, 16))
+
+      setManualPriority(selected.priority)
+    }
+  }, [selectedId, selected])
+
+  // Handle assigning/resolving complaints with manual scheduling/priority overrides
   const handleAssign = async (id: string, name: string) => {
     const initials = name.split(' ').map(n => n[0]).join('').toUpperCase()
+    
+    const formatFriendly = (dtStr: string) => {
+      if (!dtStr) return ''
+      const dt = new Date(dtStr)
+      const options: Intl.DateTimeFormatOptions = { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }
+      return dt.toLocaleDateString('en-US', options)
+    }
+
     const updated = await civiclensApi.updateComplaint(id, { 
       status: 'ASSIGNED', 
       assignee: name, 
-      initials 
+      initials,
+      priority: manualPriority,
+      dispatchTime: manualDispatchTime,
+      estimatedSolutionDate: manualSolutionTime,
+      slaRemaining: `Due: ${formatFriendly(manualSolutionTime)}`,
+      slaTotal: `Dispatched: ${formatFriendly(manualDispatchTime)}`
     })
     setComplaints(updated)
     setWorkers(civiclensApi.getWorkers())
@@ -709,27 +737,72 @@ export default function GovComplaintsPage() {
                                 : workers.filter(w => w.role === 'STAFF')
 
                               return (
-                                <div className="flex flex-col gap-2 bg-surface-container-lowest/50 p-2.5 rounded-lg border border-white/5 text-left">
-                                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-semibold">Assign to Field Staff</span>
-                                  <div className="relative text-xs">
-                                    <select
-                                      value={selectedStaffName}
-                                      onChange={e => setSelectedStaffName(e.target.value)}
-                                      className="w-full appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-2 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
-                                    >
-                                      <option value="">-- Choose Field Staff --</option>
-                                      {displayStaff.map(s => (
-                                        <option key={s.id} value={s.name} disabled={s.status === 'On Leave'}>
-                                          {s.name} ({s.tasksCount} task{s.tasksCount !== 1 ? 's' : ''} · {s.status})
-                                        </option>
-                                      ))}
-                                    </select>
-                                    <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
+                                <div className="flex flex-col gap-3.5 bg-surface-container-lowest/50 p-3.5 rounded-lg border border-white/5 text-left">
+                                  <span className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">Assign to Field Staff</span>
+                                  
+                                  {/* Field Staff Selector */}
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <label className="text-[9px] text-on-surface-variant/70 uppercase font-semibold">Select Staff</label>
+                                    <div className="relative text-xs">
+                                      <select
+                                        value={selectedStaffName}
+                                        onChange={e => setSelectedStaffName(e.target.value)}
+                                        className="w-full appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-2 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                                      >
+                                        <option value="">-- Choose Field Staff --</option>
+                                        {displayStaff.map(s => (
+                                          <option key={s.id} value={s.name} disabled={s.status === 'On Leave'}>
+                                            {s.name} ({s.tasksCount} task{s.tasksCount !== 1 ? 's' : ''} · {s.status})
+                                          </option>
+                                        ))}
+                                      </select>
+                                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
+                                    </div>
                                   </div>
+
+                                  {/* Priority Override */}
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <label className="text-[9px] text-on-surface-variant/70 uppercase font-semibold">Priority Override</label>
+                                    <div className="relative text-xs">
+                                      <select
+                                        value={manualPriority}
+                                        onChange={e => setManualPriority(e.target.value as any)}
+                                        className="w-full appearance-none bg-surface-container-low border border-white/10 rounded-lg pl-3 pr-8 py-2 text-on-surface focus:outline-none focus:border-white/30 transition-colors cursor-pointer"
+                                      >
+                                        <option value="MEDIUM">MEDIUM</option>
+                                        <option value="HIGH">HIGH</option>
+                                        <option value="CRITICAL">CRITICAL</option>
+                                      </select>
+                                      <span className="material-symbols-outlined absolute right-2.5 top-1/2 -translate-y-1/2 text-on-surface-variant pointer-events-none text-[16px]">expand_more</span>
+                                    </div>
+                                  </div>
+
+                                  {/* Dispatch Time (Manual) */}
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <label className="text-[9px] text-on-surface-variant/70 uppercase font-semibold">Dispatch Time (Manual)</label>
+                                    <input
+                                      type="datetime-local"
+                                      value={manualDispatchTime}
+                                      onChange={e => setManualDispatchTime(e.target.value)}
+                                      className="w-full bg-surface-container-low border border-white/10 rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:border-white/30 text-xs"
+                                    />
+                                  </div>
+
+                                  {/* Estimated Solution Time (Due Date) */}
+                                  <div className="flex flex-col gap-1 text-xs">
+                                    <label className="text-[9px] text-on-surface-variant/70 uppercase font-semibold">Est. Solution Due Date</label>
+                                    <input
+                                      type="datetime-local"
+                                      value={manualSolutionTime}
+                                      onChange={e => setManualSolutionTime(e.target.value)}
+                                      className="w-full bg-surface-container-low border border-white/10 rounded-lg px-3 py-2 text-on-surface focus:outline-none focus:border-white/30 text-xs"
+                                    />
+                                  </div>
+
                                   <button
                                     onClick={() => handleAssign(selected.id, selectedStaffName)}
                                     disabled={!selectedStaffName}
-                                    className="w-full py-2 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5"
+                                    className="w-full py-2.5 bg-primary text-on-primary text-xs font-semibold rounded-lg hover:opacity-95 disabled:opacity-50 transition-all flex items-center justify-center gap-1.5 mt-2 shadow-lg"
                                   >
                                     <span className="material-symbols-outlined text-[15px]">assignment_turned_in</span>
                                     Assign Task
