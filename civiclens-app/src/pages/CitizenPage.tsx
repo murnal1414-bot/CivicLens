@@ -81,22 +81,25 @@ export default function CitizenPage() {
     checkAuth()
   }, [navigate])
 
-  // Initialize Leaflet Map
+  // Initialize Leaflet Map — depends on [loading] so it runs AFTER auth resolves
+  // and the map DOM element is actually rendered (avoids null mapRef on first mount)
   useEffect(() => {
+    if (loading) return          // map div not in DOM yet
     if (!mapRef.current) return
 
-    // If map isn't initialized yet, initialize it
     if (!mapInstance.current) {
+      // Clear any stale Leaflet state left on the DOM node
       if ((mapRef.current as any)._leaflet_id) {
-        (mapRef.current as any)._leaflet_id = null;
-        mapRef.current.innerHTML = '';
+        (mapRef.current as any)._leaflet_id = null
+        mapRef.current.innerHTML = ''
       }
+
       const map = L.map(mapRef.current, { zoomControl: false }).setView([lat, lng], 13)
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         attribution: '© OpenStreetMap contributors'
       }).addTo(map)
 
-      // Fix default marker icon issue in Leaflet
+      // Pinned marker — NOT draggable. Location only changes via Fetch / GPS button.
       const markerIcon = L.icon({
         iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
         shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
@@ -104,60 +107,16 @@ export default function CitizenPage() {
         iconAnchor: [12, 41]
       })
 
-      const marker = L.marker([lat, lng], { icon: markerIcon, draggable: true }).addTo(map)
+      const marker = L.marker([lat, lng], { icon: markerIcon, draggable: false }).addTo(map)
       markerRef.current = marker
       mapInstance.current = map
 
-      // Force recalculation of map size to prevent gray boxes
-      setTimeout(() => {
-        if (mapInstance.current) {
-          mapInstance.current.invalidateSize()
-        }
-      }, 300)
-
-      // Watch for dynamic size changes (like hover expansions)
+      // Recompute tile layout if the card animates / resizes
       const resizeObserver = new ResizeObserver(() => {
-        if (mapInstance.current) {
-          mapInstance.current.invalidateSize()
-        }
+        mapInstance.current?.invalidateSize()
       })
       resizeObserver.observe(mapRef.current)
 
-      // On dragend, reverse geocode to update address
-      marker.on('dragend', async () => {
-        const position = marker.getLatLng()
-        setLat(position.lat)
-        setLng(position.lng)
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.lat}&lon=${position.lng}`)
-          const data = await res.json()
-          if (data?.display_name) {
-            setAddress(data.display_name)
-          }
-        } catch (err) {
-          console.error('Reverse geocode failed:', err)
-        }
-      })
-
-      // On map click, move marker and reverse geocode
-      map.on('click', async (e: any) => {
-        const { lat: clickLat, lng: clickLng } = e.latlng
-        setLat(clickLat)
-        setLng(clickLng)
-        marker.setLatLng([clickLat, clickLng])
-        try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${clickLat}&lon=${clickLng}`)
-          const data = await res.json()
-          if (data?.display_name) {
-            setAddress(data.display_name)
-          }
-        } catch (err) {
-          console.error('Reverse geocode failed:', err)
-        }
-      })
-      
-      // Store cleanup function directly to run on unmount
-      mapRef.current.dataset.cleanup = 'true'
       return () => {
         resizeObserver.disconnect()
         if (mapInstance.current) {
@@ -166,11 +125,7 @@ export default function CitizenPage() {
         }
       }
     }
-
-    return () => {
-      // Clean up handled by closure return if initialized
-    }
-  }, [])
+  }, [loading])
 
   const [isFetchingLocation, setIsFetchingLocation] = useState(false)
 

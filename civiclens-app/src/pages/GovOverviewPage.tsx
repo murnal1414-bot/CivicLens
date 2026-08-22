@@ -69,7 +69,9 @@ export default function GovOverviewPage() {
           workersCount: activeCount > 0 ? activeCount * 3 : 0
         }
       })
-      setDepartments(computedDepts.slice(0, 5))
+      // Sort by active issues descending so departments WITH issues appear first
+      const sortedDepts = [...computedDepts].sort((a, b) => b.activeIssues - a.activeIssues)
+      setDepartments(sortedDepts.slice(0, 5))
 
       // Generate dynamic activity feed
       const computedActivity = complaints.slice(0, 3).map(c => {
@@ -179,24 +181,26 @@ export default function GovOverviewPage() {
         color = '#facc15' // Orange/Yellow
       }
 
-      let latVal = Number(c.latitude)
-      let lngVal = Number(c.longitude)
-      
-      // If missing, or if it's the exact default coordinate (which causes stacking), apply a tiny random offset
-      if (!latVal || !lngVal || (Math.abs(latVal - 22.7196) < 0.0001 && Math.abs(lngVal - 75.8577) < 0.0001)) {
+      let latVal = c.latitude != null ? Number(c.latitude) : null
+      let lngVal = c.longitude != null ? Number(c.longitude) : null
+
+      // If coordinates are genuinely missing/NaN or are the exact default centre (stacking), spread via hash
+      const missingCoords = latVal == null || lngVal == null || isNaN(latVal) || isNaN(lngVal)
+      const isDefaultCentre = !missingCoords && Math.abs(latVal! - 22.7196) < 0.0001 && Math.abs(lngVal! - 75.8577) < 0.0001
+      if (missingCoords || isDefaultCentre) {
         const hash = c.id.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
         latVal = 22.7196 + ((hash % 100) * 0.0004) - 0.02
         lngVal = 75.8577 + ((hash % 70) * 0.0004) - 0.015
       }
 
-      const circle = L.circle([latVal, lngVal], {
+      const circle = L.circle([latVal!, lngVal!], {
         color: color,
         fillColor: color,
         fillOpacity: 0.8,
         radius: 120
       }).addTo(mapInstance.current!)
 
-      bounds.extend([latVal, lngVal])
+      bounds.extend([latVal!, lngVal!])
 
       circle.bindPopup(`
         <div style="font-family: sans-serif; font-size: 11px; padding: 2px; color: #111;">
