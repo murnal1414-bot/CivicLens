@@ -15,6 +15,7 @@ export default function LoginPage() {
   const [gpsOk, setGpsOk] = useState(false)
   
   const [phone, setPhone] = useState('')
+  const [citizenName, setCitizenName] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   
@@ -115,15 +116,20 @@ export default function LoginPage() {
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
     if (tab === 'citizen') {
+      if (!citizenName.trim()) {
+        setMessage('Please enter your full name.')
+        return
+      }
       if (!phone.trim()) {
         setMessage('Please enter your mobile number.')
         return
       }
       setMessage('')
-      // Mock login: Store phone in localStorage and redirect to citizen page
+      // Mock login: Store phone and name in localStorage and redirect to citizen page
       localStorage.setItem('active_role', 'citizen')
       localStorage.removeItem('officer_email')
       localStorage.removeItem('officer_username')
+      localStorage.setItem('citizen_name', citizenName.trim())
       localStorage.setItem('citizen_phone', phone.trim())
       navigate('/citizen/dashboard')
     } else {
@@ -252,6 +258,16 @@ export default function LoginPage() {
                     </div>
 
                     <div className="w-full flex flex-col gap-2">
+                      <div className="relative w-full">
+                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">person</span>
+                        <input
+                          value={citizenName}
+                          onChange={e => setCitizenName(e.target.value)}
+                          className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 transition-all placeholder:text-gray-400 dark:placeholder:text-on-surface-variant/30"
+                          placeholder="Full Name"
+                          type="text"
+                        />
+                      </div>
                       <div className="relative w-full">
                         <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">call</span>
                         <input
