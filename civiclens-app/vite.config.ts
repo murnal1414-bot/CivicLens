@@ -23,8 +23,8 @@ export default defineConfig(({ mode }) => {
           name: 'CivicLens',
           short_name: 'CivicLens',
           description: 'Smart Indore AI Grievance Portal',
-          theme_color: '#ffffff',
-          background_color: '#ffffff',
+          theme_color: '#0f172a',
+          background_color: '#f8fafc',
           display: 'standalone',
           start_url: '/',
           icons: [
