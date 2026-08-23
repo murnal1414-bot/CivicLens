@@ -385,6 +385,7 @@ export default function GovOverviewPage() {
                   <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
                   Live Map
                 </span>
+              </div>
                 
               {/* Bottom gradient mask for map */}
               <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white via-white/50 dark:from-[#0e0e0e] dark:via-[#0e0e0e]/50 to-transparent pointer-events-none z-[5]" />
