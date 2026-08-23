@@ -19,6 +19,11 @@ export default function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   
+  const [showOtp, setShowOtp] = useState(false)
+  const [otp, setOtp] = useState('')
+  const [isSending, setIsSending] = useState(false)
+  const [isVerifying, setIsVerifying] = useState(false)
+  
   const [message, setMessage] = useState('')
 
   // Listen for Supabase auth state changes
@@ -125,13 +130,19 @@ export default function LoginPage() {
         return
       }
       setMessage('')
-      // Mock login: Store phone and name in localStorage and redirect to citizen page
-      localStorage.setItem('active_role', 'citizen')
-      localStorage.removeItem('officer_email')
-      localStorage.removeItem('officer_username')
-      localStorage.setItem('citizen_name', citizenName.trim())
-      localStorage.setItem('citizen_phone', phone.trim())
-      navigate('/citizen/dashboard')
+      setIsSending(true)
+      
+      supabase.auth.signInWithOtp({
+        phone: phone.trim(),
+      }).then(({ error }) => {
+        setIsSending(false)
+        if (error) {
+          setMessage(`Error: ${error.message}`)
+        } else {
+          setMessage('OTP sent! Please check your messages.')
+          setShowOtp(true)
+        }
+      })
     } else {
       if (!username.trim() || !password.trim()) {
         setMessage('Please enter email and password.')
@@ -151,6 +162,34 @@ export default function LoginPage() {
       localStorage.removeItem('citizen_phone')
       localStorage.setItem('officer_email', username.trim().toLowerCase())
       navigate('/gov/overview')
+    }
+  }
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!otp.trim()) {
+      setMessage('Please enter the OTP.')
+      return
+    }
+    setMessage('')
+    setIsVerifying(true)
+    
+    const { data, error } = await supabase.auth.verifyOtp({
+      phone: phone.trim(),
+      token: otp.trim(),
+      type: 'sms'
+    })
+    
+    setIsVerifying(false)
+    if (error) {
+      setMessage(`Verification Error: ${error.message}`)
+    } else {
+      localStorage.setItem('active_role', 'citizen')
+      localStorage.removeItem('officer_email')
+      localStorage.removeItem('officer_username')
+      localStorage.setItem('citizen_name', citizenName.trim())
+      localStorage.setItem('citizen_phone', phone.trim())
+      navigate('/citizen/dashboard')
     }
   }
 
@@ -196,7 +235,7 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              <form onSubmit={handleLogin} className="w-full flex flex-col gap-4">
+              <form onSubmit={tab === 'citizen' ? (showOtp ? handleVerifyOtp : handleLogin) : handleLogin} className="w-full flex flex-col gap-4">
                 {message && (
                   <p className="text-xs text-error text-center bg-error-container/10 p-2 rounded-lg border border-error/20">{message}</p>
                 )}
@@ -258,33 +297,71 @@ export default function LoginPage() {
                     </div>
 
                     <div className="w-full flex flex-col gap-2">
-                      <div className="relative w-full">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">person</span>
-                        <input
-                          value={citizenName}
-                          onChange={e => setCitizenName(e.target.value)}
-                          className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 transition-all placeholder:text-gray-400 dark:placeholder:text-on-surface-variant/30"
-                          placeholder="Full Name"
-                          type="text"
-                        />
-                      </div>
-                      <div className="relative w-full">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">call</span>
-                        <input
-                          value={phone}
-                          onChange={e => setPhone(e.target.value)}
-                          className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 transition-all placeholder:text-gray-400 dark:placeholder:text-on-surface-variant/30"
-                          placeholder="Enter mobile number"
-                          type="tel"
-                        />
-                      </div>
-                      <button
-                        type="submit"
-                        className="w-full bg-gray-900 dark:bg-primary text-white dark:text-on-primary text-xs font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90 transition-all border border-black/10 dark:border-white/5"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">sms</span>
-                        Send OTP
-                      </button>
+                      {!showOtp ? (
+                        <>
+                          <div className="relative w-full">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">person</span>
+                            <input
+                              value={citizenName}
+                              onChange={e => setCitizenName(e.target.value)}
+                              className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 transition-all placeholder:text-gray-400 dark:placeholder:text-on-surface-variant/30"
+                              placeholder="Full Name"
+                              type="text"
+                            />
+                          </div>
+                          <div className="relative w-full">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">call</span>
+                            <input
+                              value={phone}
+                              onChange={e => setPhone(e.target.value)}
+                              className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 transition-all placeholder:text-gray-400 dark:placeholder:text-on-surface-variant/30"
+                              placeholder="Enter mobile number with country code (e.g. +91...)"
+                              type="tel"
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={isSending}
+                            className="w-full bg-gray-900 dark:bg-primary text-white dark:text-on-primary text-xs font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:opacity-90 transition-all border border-black/10 dark:border-white/5 disabled:opacity-50"
+                          >
+                            <span className={`material-symbols-outlined text-[16px] ${isSending ? 'animate-spin' : ''}`}>
+                              {isSending ? 'refresh' : 'sms'}
+                            </span>
+                            {isSending ? 'Sending OTP...' : 'Send OTP'}
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div className="relative w-full">
+                            <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">pin</span>
+                            <input
+                              value={otp}
+                              onChange={e => setOtp(e.target.value)}
+                              className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-4 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 transition-all placeholder:text-gray-400 dark:placeholder:text-on-surface-variant/30 tracking-widest text-center"
+                              placeholder="Enter 6-digit OTP"
+                              type="text"
+                              maxLength={6}
+                            />
+                          </div>
+                          <button
+                            type="submit"
+                            disabled={isVerifying}
+                            className="w-full bg-green-600 text-white text-xs font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-1.5 hover:bg-green-700 transition-all border border-black/10 disabled:opacity-50"
+                          >
+                            <span className={`material-symbols-outlined text-[16px] ${isVerifying ? 'animate-spin' : ''}`}>
+                              {isVerifying ? 'refresh' : 'check_circle'}
+                            </span>
+                            {isVerifying ? 'Verifying...' : 'Verify & Login'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => { setShowOtp(false); setOtp(''); setMessage(''); }}
+                            className="w-full bg-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white text-xs py-2 font-medium"
+                          >
+                            Change mobile number
+                          </button>
+                        </>
+                      )}
                     </div>
                   </>
                 ) : (
