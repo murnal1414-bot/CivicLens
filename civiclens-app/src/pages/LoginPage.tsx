@@ -171,38 +171,6 @@ export default function LoginPage() {
                 {tab === 'citizen' ? (
                   /* ── Citizen View ── */
                   <>
-                    <div className="w-full flex flex-col gap-2">
-                      <div className="flex items-center justify-between px-1 text-[10px] text-gray-500 dark:text-on-surface-variant/70 uppercase tracking-widest font-semibold">
-                        <span>Select City</span>
-                        <button
-                          type="button"
-                          onClick={detectLocation}
-                          className="flex items-center gap-1 text-gray-900 dark:text-primary hover:opacity-85 transition-opacity"
-                        >
-                          <span className={`material-symbols-outlined text-[13px] ${gpsLoading ? 'animate-spin' : ''}`}>
-                            {gpsLoading ? 'refresh' : 'my_location'}
-                          </span>
-                          Detect location
-                        </button>
-                      </div>
-                      <div className="relative w-full">
-                        <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 text-[18px]">location_city</span>
-                        <select
-                          value={city}
-                          onChange={e => setCity(e.target.value)}
-                          className="w-full bg-white dark:bg-surface-container-highest/50 border border-gray-300 dark:border-white/10 text-gray-900 dark:text-on-surface text-xs rounded-xl py-3 pl-10 pr-8 focus:outline-none focus:border-gray-500 dark:focus:border-white/30 appearance-none cursor-pointer"
-                        >
-                          <option value="indore">Indore</option>
-                          <option value="bhopal">Bhopal</option>
-                          <option value="gwalior">Gwalior</option>
-                          <option value="jabalpur">Jabalpur</option>
-                        </select>
-                        <span className="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 dark:text-on-surface-variant/50 pointer-events-none text-[18px]">expand_more</span>
-                      </div>
-                      {gpsOk && (
-                        <p className="text-[10px] text-green-500 px-1">Location verified automatically</p>
-                      )}
-                    </div>
 
                     <button
                       type="button"
