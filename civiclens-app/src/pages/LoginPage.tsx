@@ -132,17 +132,12 @@ export default function LoginPage() {
       setMessage('')
       setIsSending(true)
       
-      supabase.auth.signInWithOtp({
-        phone: phone.trim(),
-      }).then(({ error }) => {
+      // Mock sending OTP
+      setTimeout(() => {
         setIsSending(false)
-        if (error) {
-          setMessage(`Error: ${error.message}`)
-        } else {
-          setMessage('OTP sent! Please check your messages.')
-          setShowOtp(true)
-        }
-      })
+        setMessage('OTP sent! (Use 123456 for testing)')
+        setShowOtp(true)
+      }, 1000)
     } else {
       if (!username.trim() || !password.trim()) {
         setMessage('Please enter email and password.')
@@ -171,26 +166,24 @@ export default function LoginPage() {
       setMessage('Please enter the OTP.')
       return
     }
+    
+    // Mock OTP verification (accepts 123456 for demo)
     setMessage('')
     setIsVerifying(true)
     
-    const { data, error } = await supabase.auth.verifyOtp({
-      phone: phone.trim(),
-      token: otp.trim(),
-      type: 'sms'
-    })
-    
-    setIsVerifying(false)
-    if (error) {
-      setMessage(`Verification Error: ${error.message}`)
-    } else {
-      localStorage.setItem('active_role', 'citizen')
-      localStorage.removeItem('officer_email')
-      localStorage.removeItem('officer_username')
-      localStorage.setItem('citizen_name', citizenName.trim())
-      localStorage.setItem('citizen_phone', phone.trim())
-      navigate('/citizen/dashboard')
-    }
+    setTimeout(() => {
+      setIsVerifying(false)
+      if (otp !== '123456') {
+        setMessage('Invalid OTP. Please try again.')
+      } else {
+        localStorage.setItem('active_role', 'citizen')
+        localStorage.removeItem('officer_email')
+        localStorage.removeItem('officer_username')
+        localStorage.setItem('citizen_name', citizenName.trim())
+        localStorage.setItem('citizen_phone', phone.trim())
+        navigate('/citizen/dashboard')
+      }
+    }, 1000)
   }
 
   return (
