@@ -95,6 +95,48 @@ export default function Navbar() {
     }
   }, [])
 
+  // Real-time notifications for citizen complaints
+  useEffect(() => {
+    const phone = localStorage.getItem('citizen_phone')
+    if (!phone) return
+
+    // Request notification permissions
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission()
+    }
+
+    const channel = supabase
+      .channel('citizen_notifications')
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'complaints',
+          filter: `phone=eq.${phone}`
+        },
+        (payload: any) => {
+          const oldStatus = payload.old?.status
+          const newStatus = payload.new?.status
+          
+          if (oldStatus !== newStatus && newStatus) {
+            // Trigger native notification
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification('Complaint Status Updated', {
+                body: `Your complaint regarding "${payload.new.category}" is now marked as ${newStatus.toUpperCase()}.`,
+                icon: '/pwa-192x192.png'
+              })
+            }
+          }
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
   const handleSignOut = async () => {
     await supabase.auth.signOut()
     localStorage.removeItem('citizen_phone')
