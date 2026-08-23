@@ -10,11 +10,6 @@ export default function LoginPage() {
   const initialTab = searchParams.get('role') === 'officer' ? 'officer' : 'citizen'
   const [tab, setTab] = useState<'citizen' | 'officer'>(initialTab)
   
-  const [city, setCity] = useState('indore')
-  const [gpsLoading, setGpsLoading] = useState(false)
-  const [gpsOk, setGpsOk] = useState(false)
-  
-  const [citizenName, setCitizenName] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   
@@ -102,37 +97,9 @@ export default function LoginPage() {
     }
   }, [searchParams])
 
-  const detectLocation = () => {
-    setGpsLoading(true)
-    navigator.geolocation.getCurrentPosition(
-      () => {
-        setCity('indore')
-        setGpsOk(true)
-        setGpsLoading(false)
-      },
-      () => {
-        setGpsLoading(false)
-      }
-    )
-  }
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault()
-    if (tab === 'citizen') {
-      if (!citizenName.trim()) {
-        setMessage('Please enter your full name.')
-        return
-      }
-      setMessage('')
-      
-      // Mock login: Store name and a dummy phone to keep the rest of the app working
-      localStorage.setItem('active_role', 'citizen')
-      localStorage.removeItem('officer_email')
-      localStorage.removeItem('officer_username')
-      localStorage.setItem('citizen_name', citizenName.trim())
-      localStorage.setItem('citizen_phone', '9999999999')
-      navigate('/citizen/dashboard')
-    } else {
+    if (tab === 'officer') {
       if (!username.trim() || !password.trim()) {
         setMessage('Please enter email and password.')
         return
