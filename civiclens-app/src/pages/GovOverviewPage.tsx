@@ -386,6 +386,11 @@ export default function GovOverviewPage() {
                   Live Map
                 </span>
                 
+              {/* Bottom gradient mask for map */}
+              <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-white via-white/50 dark:from-[#0e0e0e] dark:via-[#0e0e0e]/50 to-transparent pointer-events-none z-[5]" />
+
+              {/* Action buttons overlay */}
+              <div className="absolute top-4 right-4 flex flex-col gap-2 z-10">
                 <button 
                   onClick={() => {
                     const mapEl = mapRef.current?.parentElement?.parentElement
@@ -397,15 +402,15 @@ export default function GovOverviewPage() {
                       }
                     }
                   }}
-                  className="z-[1000] p-2 bg-surface-container/90 backdrop-blur text-on-surface hover:text-primary rounded-xl border border-white/10 hover:border-primary/50 shadow-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-auto cursor-pointer"
+                  className="z-[1000] p-2 bg-white/90 dark:bg-black/90 backdrop-blur text-gray-900 dark:text-gray-100 hover:text-primary rounded-xl border border-black/10 dark:border-white/10 hover:border-primary/50 shadow-xl opacity-0 group-hover:opacity-100 transition-all pointer-events-auto cursor-pointer"
                   title="Toggle Fullscreen"
                 >
                   <span className="material-symbols-rounded text-[20px]">fullscreen</span>
                 </button>
               </div>
 
-              <div className="relative z-10 mt-auto bg-surface-container-lowest/95 backdrop-blur border border-white/10 p-3 rounded-xl shadow-lg pointer-events-none">
-                <h4 className="text-xs font-semibold text-on-surface mb-2">Priority Legend</h4>
+              <div className="relative z-10 mt-auto bg-white/95 dark:bg-[#0e0e0e]/95 backdrop-blur border border-black/10 dark:border-white/10 p-3 rounded-xl shadow-lg pointer-events-none">
+                <h4 className="text-xs font-semibold text-gray-900 dark:text-gray-100 mb-2">Priority Legend</h4>
                 <div className="space-y-1.5">
                   {[
                     { color: 'bg-error', name: 'Critical Issues' },
